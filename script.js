@@ -169,7 +169,7 @@
   // タッチ操作(スマホ・タブレット)ではポインタが「粗い」判定になるため、
   // それに合わせてハンドルなどの当たり判定を大きくする
   const IS_COARSE_POINTER = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  const HANDLE_PX = IS_COARSE_POINTER ? 24 : 10;
+  const HANDLE_PX = IS_COARSE_POINTER ? 44 : 10;
   const ROTATE_STALK_PX = IS_COARSE_POINTER ? 34 : 26;
 
   function buildHandles(includeEdges){
@@ -660,7 +660,18 @@
     menu.style.left = Math.max(4, left) + 'px';
     menu.style.top = Math.max(4, top) + 'px';
     activeContextMenu = menu;
-    setTimeout(() => document.addEventListener('click', closeContextMenu, { once:true }), 0);
+    // 「次のクリックで閉じる」だと、長押しでメニューを開いたときに指を離す動作自体が
+    // 合成click イベントを発生させてしまい、開いた瞬間に閉じてしまう。
+    // そのため「次に(メニューの外側を)pointerdown した時」を閉じる条件にする
+    // （その操作は長押しジェスチャーの続きではなく、必ず新しい入力になるため）。
+    setTimeout(() => {
+      function onOutsidePointerDown(e){
+        if(e.target.closest && e.target.closest('.context-menu')) return;
+        document.removeEventListener('pointerdown', onOutsidePointerDown);
+        closeContextMenu();
+      }
+      document.addEventListener('pointerdown', onOutsidePointerDown);
+    }, 0);
   }
 
   stageWrap.addEventListener('pointerdown', e => {
@@ -1064,8 +1075,11 @@
   }
 
   // ---- テキストの編集モード ----
+  // contentEditableは編集中だけtrueにする。常時trueだと、タッチ操作でこの要素の近くにある
+  // リサイズハンドルへのタッチが編集領域に横取りされてしまう(ブラウザ側の入力欄優先の挙動)ため。
   function enterTextEdit(item){
     item.editing = true;
+    item.editEl.contentEditable = 'true';
     item.editEl.style.display = 'flex';
     item.arcPreviewEl.style.display = 'none';
     item.editEl.focus();
@@ -1074,6 +1088,7 @@
   function exitTextEdit(item){
     item.editing = false;
     item.text = item.editEl.textContent;
+    item.editEl.contentEditable = 'false';
     applyArcModeVisibility(item);
   }
   function applyArcModeVisibility(item){
@@ -1445,7 +1460,7 @@
 
     const editEl = document.createElement('div');
     editEl.className = 'text-edit';
-    editEl.contentEditable = 'true';
+    editEl.contentEditable = 'false';
     editEl.spellcheck = false;
     editEl.textContent = text;
     content.appendChild(editEl);
@@ -1516,7 +1531,7 @@
       const tr = document.createElement('tr');
       for(let c = 0; c < item.cols; c++){
         const td = document.createElement('td');
-        td.contentEditable = 'true';
+        td.contentEditable = 'false'; // 編集中だけtrueにする（タッチでリサイズハンドルが横取りされるのを防ぐ）
         td.spellcheck = false;
         td.textContent = item.cells[r][c] || '';
         const cellImg = item.cellImages && item.cellImages[r] && item.cellImages[r][c];
@@ -1536,11 +1551,12 @@
         td.addEventListener('dblclick', e => {
           e.stopPropagation();
           selectItem(item.id);
+          td.contentEditable = 'true';
           td.focus();
           document.getSelection().selectAllChildren(td);
         });
         td.addEventListener('focus', () => { item.tableEditing = true; });
-        td.addEventListener('blur', () => { item.tableEditing = false; });
+        td.addEventListener('blur', () => { item.tableEditing = false; td.contentEditable = 'false'; });
         td.addEventListener('contextmenu', e => {
           e.preventDefault();
           e.stopPropagation();
@@ -1946,7 +1962,7 @@
     if(item.shapeTextEl) item.shapeTextEl.remove();
     const el = document.createElement('div');
     el.className = 'shape-text-edit';
-    el.contentEditable = 'true';
+    el.contentEditable = 'false'; // 編集中だけtrueにする（タッチでリサイズハンドルが横取りされるのを防ぐ）
     el.spellcheck = false;
     el.textContent = item.shapeText || '';
     el.style.display = item.shapeText ? 'flex' : 'none';
@@ -1955,6 +1971,7 @@
     el.addEventListener('blur', () => {
       item.shapeTextEditing = false;
       item.shapeText = el.textContent;
+      el.contentEditable = 'false';
       el.style.display = item.shapeText ? 'flex' : 'none';
       pushHistory();
     });
@@ -1963,6 +1980,7 @@
   }
   function enterShapeTextEdit(item){
     item.shapeTextEditing = true;
+    item.shapeTextEl.contentEditable = 'true';
     item.shapeTextEl.style.display = 'flex';
     item.shapeTextEl.focus();
     document.getSelection().selectAllChildren(item.shapeTextEl);
