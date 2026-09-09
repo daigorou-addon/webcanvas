@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebCanvas — 画像とテキストを並べてダウンロード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;700;900&family=Zen+Maru+Gothic:wght@400;700;900&family=Kiwi+Maru:wght@400;500&family=Zen+Antique&family=Zen+Old+Mincho:wght@400;900&family=Noto+Serif+JP:wght@400;700;900&family=Shippori+Mincho:wght@400;700&family=Yusei+Magic&family=Yomogi&family=Klee+One:wght@400;600&family=Hachi+Maru+Pop&family=Dela+Gothic+One&family=Reggae+One&family=RocknRoll+One&family=Rampart+One&family=Train+One&family=DotGothic16&family=Potta+One&family=Stick&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="local-badge" data-i18n="local_badge">local-only</span>
+    <span class="brand-name">WebCanvas</span>
+    <a href="https://daigorou-addon.github.io/daigorou-tools/" class="back-link" data-i18n="back_to_top">← Daigorou-Tools</a>
+  </div>
+  <div class="sizebar">
+    <select id="presetSelect"></select>
+    <div class="custom-size" id="customSize">
+      <input type="number" id="customW" min="1" max="8000" data-i18n-placeholder="custom_w_placeholder">
+      <span>×</span>
+      <input type="number" id="customH" min="1" max="8000" data-i18n-placeholder="custom_h_placeholder">
+      <button id="applyCustom" class="ghost" data-i18n="apply_custom_btn">適用</button>
+    </div>
+    <span class="canvas-dim" id="canvasDim">1280 × 720 px</span>
+    <select id="langSelect" class="lang-select">
+      <option value="ja">日本語</option>
+      <option value="en">English</option>
+      <option value="ko">한국어</option>
+      <option value="zh-CN">简体中文</option>
+      <option value="zh-TW">繁體中文</option>
+      <option value="es">Español</option>
+    </select>
+  </div>
+</header>
+
+<main>
+  <aside class="toolbar">
+    <div class="history-btns">
+      <button class="ghost icon-btn" id="undoBtn" disabled title="Undo" data-i18n-title="undo_btn">↶</button>
+      <button class="ghost icon-btn" id="redoBtn" disabled title="Redo" data-i18n-title="redo_btn">↷</button>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
+    <select id="addMenu">
+      <option value="" data-i18n="add_menu_placeholder">ツール</option>
+      <option value="draw" data-i18n="add_menu_draw">手描き</option>
+      <option value="text" data-i18n="add_menu_text">テキスト</option>
+      <option value="table" data-i18n="add_menu_table">表</option>
+      <option value="line" data-i18n="add_menu_line">線</option>
+      <option value="shape" data-i18n="add_menu_shape">図形</option>
+    </select>
+
+    <div class="panel-box draw-options" id="drawOptions" style="display:none">
+      <div class="chip-row">
+        <span class="chip" id="penChip" data-i18n="pen_chip">ペン</span>
+        <span class="chip" id="eraserChip" data-i18n="eraser_chip">消しゴム</span>
+      </div>
+      <label data-i18n="pen_color_label">ペンの色</label>
+      <input type="color" id="penColor" value="#ff3b3b">
+      <label data-i18n="pen_size_label">太さ</label>
+      <input type="range" id="penSize" min="1" max="60" value="6">
+      <button class="ghost small" id="clearDrawing" data-i18n="clear_drawing_btn">描画を消す</button>
+    </div>
+
+    <div class="panel-box text-options" id="textOptions" style="display:none">
+      <label data-i18n="opt_font_label">フォント</label>
+      <select id="fontSelect">
+        <optgroup label="ゴシック" data-i18n-label="font_group_gothic">
+          <option value="Zen Kaku Gothic New" data-i18n="font_gothic">ゴシック</option>
+          <option value="Noto Sans JP" data-i18n="font_noto_sans">ゴシック（標準）</option>
+        </optgroup>
+        <optgroup label="丸ゴシック" data-i18n-label="font_group_rounded">
+          <option value="M PLUS Rounded 1c" data-i18n="font_rounded">丸ゴシック</option>
+          <option value="Zen Maru Gothic" data-i18n="font_zen_maru">丸ゴシック（モダン）</option>
+          <option value="Kiwi Maru" data-i18n="font_kiwi_maru">丸ゴシック（やわらか）</option>
+        </optgroup>
+        <optgroup label="明朝" data-i18n-label="font_group_mincho">
+          <option value="Zen Antique" data-i18n="font_mincho">明朝</option>
+          <option value="Zen Old Mincho" data-i18n="font_zen_old_mincho">明朝（上品）</option>
+          <option value="Noto Serif JP" data-i18n="font_noto_serif">明朝（標準）</option>
+          <option value="Shippori Mincho" data-i18n="font_shippori_mincho">明朝（細め）</option>
+        </optgroup>
+        <optgroup label="手書き・筆文字" data-i18n-label="font_group_handwritten">
+          <option value="Yusei Magic" data-i18n="font_handwritten">手書き風</option>
+          <option value="Yomogi" data-i18n="font_yomogi">手書き風（やわらか）</option>
+          <option value="Klee One" data-i18n="font_klee">筆文字</option>
+          <option value="Hachi Maru Pop" data-i18n="font_hachi_maru">手書き風（丸っこい）</option>
+        </optgroup>
+        <optgroup label="ポップ・インパクト" data-i18n-label="font_group_pop">
+          <option value="Dela Gothic One" data-i18n="font_dela_gothic">インパクト太字</option>
+          <option value="Reggae One" data-i18n="font_reggae">ポップ太字</option>
+          <option value="RocknRoll One" data-i18n="font_rocknroll">スタイリッシュ太字</option>
+          <option value="Rampart One" data-i18n="font_rampart">立体インパクト</option>
+          <option value="Potta One" data-i18n="font_potta">まるっとポップ</option>
+        </optgroup>
+        <optgroup label="レトロ・ゲーム風" data-i18n-label="font_group_retro">
+          <option value="Train One" data-i18n="font_train">レトロ太字</option>
+          <option value="DotGothic16" data-i18n="font_dotgothic">ドット文字</option>
+          <option value="Stick" data-i18n="font_stick">極細</option>
+        </optgroup>
+      </select>
+      <label data-i18n="opt_color_label">文字色</label>
+      <input type="color" id="textColor" value="#ffffff">
+      <label data-i18n="opt_bgcolor_label">背景色</label>
+      <div class="row-inline">
+        <div class="color-swatch-wrap" id="bgColorWrap">
+          <input type="color" id="textBgColor" value="#000000">
+          <div class="none-slash"></div>
+        </div>
+        <span class="chip" id="clearBgColor" data-i18n="clear_bg_btn">なし</span>
+      </div>
+      <div class="chip-row">
+        <span class="chip" id="outlineChip" data-i18n="outline_chip">袋文字</span>
+        <span class="chip" id="shadowChip" data-i18n="shadow_chip">影文字</span>
+        <span class="chip" id="italicChip" data-i18n="italic_chip">斜め文字</span>
+        <span class="chip" id="arcChip" data-i18n="opt_arc_label">弧を描く</span>
+      </div>
+      <div class="sub-panel" id="outlineOptions" style="display:none">
+        <label data-i18n="outline_color_label">袋の色</label>
+        <input type="color" id="outlineColor" value="#000000">
+        <label data-i18n="outline_width_label">袋の太さ</label>
+        <input type="range" id="outlineWidth" min="2" max="30" value="12">
+      </div>
+      <div class="sub-panel" id="arcOptions" style="display:none">
+        <label data-i18n="opt_arc_strength_label">カーブの強さ</label>
+        <input type="range" id="arcRange" min="-100" max="100" value="0">
+      </div>
+      <button class="ghost small" id="deleteTextBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
+    </div>
+
+    <div class="panel-box image-options" id="imageOptions" style="display:none">
+      <button class="ghost" id="fitCanvasBtn" data-i18n="fit_canvas_btn">選択画像のサイズにする</button>
+      <button class="ghost" id="cropBtn" data-i18n="crop_btn">画像を切り抜く</button>
+      <button class="ghost small" id="deleteImageBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
+    </div>
+    <div class="panel-box crop-controls" id="cropControls" style="display:none">
+      <button class="ghost" id="cropApply" data-i18n="crop_apply_btn">切り抜きを適用</button>
+      <button class="ghost" id="cropCancel" data-i18n="crop_cancel_btn">キャンセル</button>
+    </div>
+
+    <div class="panel-box table-options" id="tableOptions" style="display:none">
+      <div class="hint" data-i18n="table_hint">セルを右クリックすると行・列の追加/削除ができます。境界線をつかんでドラッグすると行・列を並べ替えられます</div>
+      <button class="ghost small" id="deleteTableBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
+    </div>
+
+    <div class="panel-box line-options" id="lineOptions" style="display:none">
+      <label data-i18n="line_color_label">線の色</label>
+      <input type="color" id="lineColor" value="#ff8a3d">
+      <label data-i18n="line_width_label">線の太さ</label>
+      <input type="range" id="lineWidth" min="1" max="40" value="6">
+      <button class="ghost small" id="deleteLineBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
+    </div>
+
+    <div class="panel-box shape-options" id="shapeOptions" style="display:none">
+      <label data-i18n="shape_type_label">図形の種類</label>
+      <select id="shapeTypeSelect">
+        <option value="rect" data-i18n="shape_rect_label">四角形</option>
+        <option value="rounded-rect" data-i18n="shape_rounded_rect_label">角丸四角形</option>
+        <option value="pill" data-i18n="shape_pill_label">左右丸四角形</option>
+        <option value="ellipse" data-i18n="shape_ellipse_label">楕円</option>
+        <option value="triangle" data-i18n="shape_triangle_label">三角形</option>
+        <option value="diamond" data-i18n="shape_diamond_label">ひし形</option>
+        <option value="pentagon" data-i18n="shape_pentagon_label">五角形</option>
+        <option value="hexagon" data-i18n="shape_hexagon_label">六角形</option>
+        <option value="star" data-i18n="shape_star_label">星</option>
+        <option value="heart" data-i18n="shape_heart_label">ハート</option>
+        <option value="parallelogram" data-i18n="shape_parallelogram_label">平行四辺形</option>
+      </select>
+      <label data-i18n="shape_fill_label">塗りつぶし色</label>
+      <div class="row-inline">
+        <div class="color-swatch-wrap" id="shapeFillWrap">
+          <input type="color" id="shapeFillColor" value="#ff8a3d">
+          <div class="none-slash"></div>
+        </div>
+        <span class="chip" id="clearShapeFill" data-i18n="shape_fill_none_btn">なし</span>
+      </div>
+      <label data-i18n="shape_stroke_label">枠線の色</label>
+      <input type="color" id="shapeStrokeColor" value="#ffffff">
+      <label data-i18n="shape_stroke_width_label">枠線の太さ</label>
+      <input type="range" id="shapeStrokeWidth" min="0" max="30" value="4">
+      <div class="hint" data-i18n="shape_content_hint">図形をダブルクリックすると中に文字を入力できます。画像をこの図形の上にドラッグ＆ドロップすると図形の中だけに収まります</div>
+      <input type="file" id="shapeImageInput" accept="image/*" style="display:none;">
+      <button class="ghost small" id="shapeAddImageBtn" data-i18n="shape_add_image_btn">図形に画像を入れる</button>
+      <button class="ghost small" id="shapeClearImageBtn" data-i18n="shape_clear_image_btn" style="display:none">画像を外す</button>
+      <button class="ghost small" id="deleteShapeBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
+    </div>
+
+    <div class="hint" data-i18n="hint_text">画像はキャンバスにドラッグ＆ドロップ可能です</div>
+    <button class="primary" id="downloadBtn" data-i18n="download_btn">PNGでダウンロード</button>
+  </aside>
+
+  <aside class="layers-panel">
+    <div class="layers-panel-title" data-i18n="layers_panel_title">レイヤー</div>
+    <div class="layers-list" id="layersList"></div>
+  </aside>
+
+  <div class="stage-wrap" id="stageWrap">
+    <div class="stage" id="stage">
+      <div class="stage-empty-hint" id="stageEmptyHint">
+        <div class="stage-empty-hint-main" data-i18n="add_image_main">画像をドラッグ＆ドロップ</div>
+        <div class="stage-empty-hint-sub" data-i18n="add_image_sub">クリックしてファイルを選択（JPEG / PNG / WebP）</div>
+      </div>
+      <div class="stage-inner" id="stageInner"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-privacy" data-i18n="footer_privacy_note">すべての処理はこの端末内で行われます。ファイルはどこにも送信されません。</div>
+  <div class="footer-copyright">Copyright (C) 2026 daigorou-tools. All right reserved.</div>
+</footer>
+
+<script src="i18n.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
