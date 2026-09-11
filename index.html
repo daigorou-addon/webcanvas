@@ -48,7 +48,7 @@
     <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
     <select id="addMenu">
       <option value="" data-i18n="add_menu_placeholder">ツール</option>
-      <option value="draw" data-i18n="add_menu_draw">手描き</option>
+      <option value="draw" data-i18n="add_menu_draw">鉛筆</option>
       <option value="text" data-i18n="add_menu_text">テキスト</option>
       <option value="table" data-i18n="add_menu_table">表</option>
       <option value="line" data-i18n="add_menu_line">線</option>
@@ -61,7 +61,10 @@
         <span class="chip" id="eraserChip" data-i18n="eraser_chip">消しゴム</span>
       </div>
       <label data-i18n="pen_color_label">ペンの色</label>
-      <input type="color" id="penColor" value="#ff3b3b">
+      <div class="row-inline">
+        <input type="color" id="penColor" value="#ff3b3b">
+        <button class="ghost small eyedropper-btn" id="penEyedropperBtn" data-i18n-title="eyedropper_title" title="スポイト">💧</button>
+      </div>
       <label data-i18n="pen_size_label">太さ</label>
       <input type="range" id="penSize" min="1" max="60" value="6">
       <button class="ghost small" id="clearDrawing" data-i18n="clear_drawing_btn">描画を消す</button>
@@ -104,8 +107,13 @@
           <option value="Stick" data-i18n="font_stick">極細</option>
         </optgroup>
       </select>
+      <label data-i18n="font_size_label">文字サイズ</label>
+      <input type="range" id="textFontSize" min="8" max="400" value="40">
       <label data-i18n="opt_color_label">文字色</label>
-      <input type="color" id="textColor" value="#ffffff">
+      <div class="row-inline">
+        <input type="color" id="textColor" value="#ffffff">
+        <button class="ghost small eyedropper-btn" id="textEyedropperBtn" data-i18n-title="eyedropper_title" title="スポイト">💧</button>
+      </div>
       <label data-i18n="opt_bgcolor_label">背景色</label>
       <div class="row-inline">
         <div class="color-swatch-wrap" id="bgColorWrap">
@@ -126,6 +134,10 @@
         <label data-i18n="outline_width_label">袋の太さ</label>
         <input type="range" id="outlineWidth" min="2" max="30" value="12">
       </div>
+      <div class="sub-panel" id="shadowOptions" style="display:none">
+        <label data-i18n="shadow_size_label">影の大きさ</label>
+        <input type="range" id="shadowSize" min="30" max="300" value="100">
+      </div>
       <div class="sub-panel" id="arcOptions" style="display:none">
         <label data-i18n="opt_arc_strength_label">カーブの強さ</label>
         <input type="range" id="arcRange" min="-100" max="100" value="0">
@@ -136,6 +148,12 @@
     <div class="panel-box image-options" id="imageOptions" style="display:none">
       <button class="ghost" id="fitCanvasBtn" data-i18n="fit_canvas_btn">選択画像のサイズにする</button>
       <button class="ghost" id="cropBtn" data-i18n="crop_btn">画像を切り抜く</button>
+      <div class="chip-row">
+        <button class="chip" id="flipXBtn" data-i18n="flip_x_btn">左右反転</button>
+        <button class="chip" id="flipYBtn" data-i18n="flip_y_btn">上下反転</button>
+      </div>
+      <label data-i18n="opacity_label">不透明度</label>
+      <input type="range" id="imageOpacity" min="0" max="100" value="100">
       <button class="ghost small" id="deleteImageBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
     </div>
     <div class="panel-box crop-controls" id="cropControls" style="display:none">
@@ -170,6 +188,10 @@
         <option value="star" data-i18n="shape_star_label">星</option>
         <option value="heart" data-i18n="shape_heart_label">ハート</option>
         <option value="parallelogram" data-i18n="shape_parallelogram_label">平行四辺形</option>
+        <option value="arch-top" data-i18n="shape_arch_top_label">上だけ丸い四角形</option>
+        <option value="arrow" data-i18n="shape_arrow_label">矢印</option>
+        <option value="arrow-double" data-i18n="shape_arrow_double_label">両方向矢印</option>
+        <option value="speech-bubble" data-i18n="shape_speech_bubble_label">吹き出し</option>
       </select>
       <label data-i18n="shape_fill_label">塗りつぶし色</label>
       <div class="row-inline">
@@ -183,10 +205,15 @@
       <input type="color" id="shapeStrokeColor" value="#ffffff">
       <label data-i18n="shape_stroke_width_label">枠線の太さ</label>
       <input type="range" id="shapeStrokeWidth" min="0" max="30" value="4">
-      <div class="hint" data-i18n="shape_content_hint">図形をダブルクリックすると中に文字を入力できます。画像をこの図形の上にドラッグ＆ドロップすると図形の中だけに収まります</div>
+      <div class="hint" data-i18n="shape_content_hint">画像をこの図形の上にドラッグ＆ドロップすると図形の中だけに収まります。画像が入った図形をダブルクリックすると、画像の位置・拡大率を調整できます</div>
       <input type="file" id="shapeImageInput" accept="image/*" style="display:none;">
       <button class="ghost small" id="shapeAddImageBtn" data-i18n="shape_add_image_btn">図形に画像を入れる</button>
-      <button class="ghost small" id="shapeClearImageBtn" data-i18n="shape_clear_image_btn" style="display:none">画像を外す</button>
+      <div id="shapeImageAdjustGroup" style="display:none">
+        <label data-i18n="shape_image_scale_label">画像の拡大率</label>
+        <input type="range" id="shapeImageScale" min="100" max="300" value="100">
+        <button class="ghost small" id="shapeAdjustImageBtn" data-i18n="shape_adjust_image_btn">画像の位置を調整</button>
+        <button class="ghost small" id="shapeClearImageBtn" data-i18n="shape_clear_image_btn">画像を外す</button>
+      </div>
       <button class="ghost small" id="deleteShapeBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
     </div>
 

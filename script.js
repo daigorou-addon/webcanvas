@@ -24,6 +24,8 @@
   const cropControlsEl = document.getElementById('cropControls');
   const fontSelect = document.getElementById('fontSelect');
   const textColorInput = document.getElementById('textColor');
+  const textEyedropperBtn = document.getElementById('textEyedropperBtn');
+  const textFontSizeInput = document.getElementById('textFontSize');
   const textBgColorInput = document.getElementById('textBgColor');
   const clearBgColorBtn = document.getElementById('clearBgColor');
   const outlineChip = document.getElementById('outlineChip');
@@ -31,9 +33,14 @@
   const outlineColorInput = document.getElementById('outlineColor');
   const outlineWidthInput = document.getElementById('outlineWidth');
   const shadowChip = document.getElementById('shadowChip');
+  const shadowOptionsEl = document.getElementById('shadowOptions');
+  const shadowSizeInput = document.getElementById('shadowSize');
   const italicChip = document.getElementById('italicChip');
   const arcRange = document.getElementById('arcRange');
   const cropBtn = document.getElementById('cropBtn');
+  const flipXBtn = document.getElementById('flipXBtn');
+  const flipYBtn = document.getElementById('flipYBtn');
+  const imageOpacityInput = document.getElementById('imageOpacity');
   const cropApplyBtn = document.getElementById('cropApply');
   const cropCancelBtn = document.getElementById('cropCancel');
   const tableOptionsEl = document.getElementById('tableOptions');
@@ -53,12 +60,16 @@
   const shapeImageInput = document.getElementById('shapeImageInput');
   const shapeAddImageBtn = document.getElementById('shapeAddImageBtn');
   const shapeClearImageBtn = document.getElementById('shapeClearImageBtn');
+  const shapeImageAdjustGroup = document.getElementById('shapeImageAdjustGroup');
+  const shapeImageScaleRange = document.getElementById('shapeImageScale');
+  const shapeAdjustImageBtn = document.getElementById('shapeAdjustImageBtn');
   const undoBtn = document.getElementById('undoBtn');
   const redoBtn = document.getElementById('redoBtn');
   const penChip = document.getElementById('penChip');
   const eraserChip = document.getElementById('eraserChip');
   const drawOptionsEl = document.getElementById('drawOptions');
   const penColorInput = document.getElementById('penColor');
+  const penEyedropperBtn = document.getElementById('penEyedropperBtn');
   const penSizeInput = document.getElementById('penSize');
   const clearDrawingBtn = document.getElementById('clearDrawing');
   const bgColorWrapEl = document.getElementById('bgColorWrap');
@@ -297,6 +308,9 @@
   }
   penChip.addEventListener('click', () => setDrawMode('pen'));
   eraserChip.addEventListener('click', () => setDrawMode('eraser'));
+  penEyedropperBtn.addEventListener('click', () => {
+    startEyedropper(hex => { penColorInput.value = hex; });
+  });
 
   function drawLayerPoint(e){
     const rect = drawLayer.getBoundingClientRect();
@@ -431,6 +445,11 @@
     const showCrop = !!(sel && sel.cropping);
     textOptionsEl.style.display = showText ? 'flex' : 'none';
     imageOptionsEl.style.display = showImageOpts ? 'flex' : 'none';
+    if(showImageOpts){
+      flipXBtn.classList.toggle('on', !!sel.flipX);
+      flipYBtn.classList.toggle('on', !!sel.flipY);
+      imageOpacityInput.value = Math.round((sel.opacity != null ? sel.opacity : 1) * 100);
+    }
     tableOptionsEl.style.display = showTable ? 'flex' : 'none';
     lineOptionsEl.style.display = showLine ? 'flex' : 'none';
     shapeOptionsEl.style.display = showShape ? 'flex' : 'none';
@@ -447,11 +466,13 @@
       shapeFillWrapEl.classList.toggle('none-active', !sel.fillColor);
       shapeStrokeColorInput.value = sel.strokeColor;
       shapeStrokeWidthInput.value = sel.strokeWidth;
-      shapeClearImageBtn.style.display = sel.fillImage ? '' : 'none';
+      shapeImageAdjustGroup.style.display = sel.fillImage ? '' : 'none';
+      shapeImageScaleRange.value = Math.round((sel.fillImageScale || 1) * 100);
     }
 
     if(showText){
       fontSelect.value = sel.fontFamily;
+      textFontSizeInput.value = Math.round(sel.fontSize);
       textColorInput.value = sel.color;
       textBgColorInput.value = sel.bgColor || '#000000';
       clearBgColorBtn.classList.toggle('on', !sel.bgColor);
@@ -461,6 +482,8 @@
       outlineColorInput.value = sel.outlineColor;
       outlineWidthInput.value = sel.outlineWidth;
       shadowChip.classList.toggle('on', sel.shadow);
+      shadowOptionsEl.style.display = sel.shadow ? 'flex' : 'none';
+      shadowSizeInput.value = Math.round((sel.shadowStrength || 1) * 100);
       italicChip.classList.toggle('on', sel.italic);
       arcChip.classList.toggle('on', sel.arcEnabled);
       arcOptionsEl.style.display = sel.arcEnabled ? 'flex' : 'none';
@@ -470,9 +493,11 @@
   }
 
   function reflectOrder(){
-    // DOM順だけに頼らず、確実に重なり順どおりに見えるよう明示的にz-indexも振る
+    // 見た目の重なり順は明示的なz-indexだけで管理する（DOM上での並べ替え=appendChildは行わない）。
+    // 要素をappendChildで動かすと、クリック操作の最中（pointerdown〜pointerup の間）に
+    // ブラウザがclick/dblclickイベントを発火しなくなるという重大な副作用があったため
+    // （ダブルクリックで図形の文字編集や画像位置調整に入れなくなっていたのはこれが原因）。
     items.forEach((it, idx) => {
-      stageInner.appendChild(it.el);
       it.el.style.zIndex = String(idx + 1);
     });
   }
@@ -540,7 +565,18 @@
     const item = getItem(selectedId);
     if(!item || item.type !== 'shape') return;
     item.shapeType = shapeTypeSelect.value;
+    // 左右丸四角形(ピル型)は上下が直線・左右が半円という形が前提だが、
+    // デフォルトの図形は正方形なので、そのままだと単なる円になってしまう。
+    // ピルに切り替えたときだけ、見た目が破綻しない横長サイズに自動調整する。
+    if(item.shapeType === 'pill' && item.w < item.h * 1.8){
+      const cx = item.x + item.w/2, cy = item.y + item.h/2;
+      item.w = Math.round(item.h * 2.2);
+      item.x = Math.round(cx - item.w/2);
+      item.el.style.width = item.w + 'px';
+      item.el.style.left = item.x + 'px';
+    }
     renderShapeSVG(item);
+    updateAllHandleSizes();
     pushHistory();
   });
   shapeFillColorInput.addEventListener('input', () => {
@@ -588,8 +624,21 @@
     const item = getItem(selectedId);
     if(!item || item.type !== 'shape') return;
     clearShapeFillImage(item);
-    shapeClearImageBtn.style.display = 'none';
+    exitShapeImageAdjust(item);
+    shapeImageAdjustGroup.style.display = 'none';
   });
+  shapeAdjustImageBtn.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'shape' || !item.fillImage) return;
+    enterShapeImageAdjust(item);
+  });
+  shapeImageScaleRange.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'shape' || !item.fillImage) return;
+    item.fillImageScale = (parseInt(shapeImageScaleRange.value, 10) || 100) / 100;
+    renderShapeSVG(item);
+  });
+  shapeImageScaleRange.addEventListener('change', () => pushHistory());
 
   // ---- 右クリックのレイヤーメニュー ----
   let activeContextMenu = null;
@@ -844,7 +893,33 @@
       if(e.target.classList.contains('handle')) return;
       if(item.type === 'text' && item.editing) return; // 編集中はテキスト内クリックを邪魔しない
       if(item.type === 'table' && item.tableEditing) return; // セル編集中も同様
-      if(item.type === 'shape' && item.shapeTextEditing) return; // 図形内文字の編集中も同様
+      if(item.type === 'shape' && item.imageAdjusting){
+        // 画像の位置調整モード中は、図形を動かす代わりに画像だけをドラッグでずらす
+        e.preventDefault();
+        selectItem(item.id);
+        const startClientX = e.clientX, startClientY = e.clientY;
+        const startOffX = item.fillImageOffsetX || 0, startOffY = item.fillImageOffsetY || 0;
+        const rot = -item.rotation * Math.PI/180;
+        item.el.setPointerCapture(e.pointerId);
+        function onMoveImg(ev){
+          const dx = (ev.clientX - startClientX) / scale;
+          const dy = (ev.clientY - startClientY) / scale;
+          // 図形自体が回転していても、ドラッグ方向がその場で自然に感じられるよう補正する
+          const rdx = dx*Math.cos(rot) - dy*Math.sin(rot);
+          const rdy = dx*Math.sin(rot) + dy*Math.cos(rot);
+          item.fillImageOffsetX = startOffX + rdx;
+          item.fillImageOffsetY = startOffY + rdy;
+          renderShapeSVG(item);
+        }
+        function onUpImg(){
+          item.el.removeEventListener('pointermove', onMoveImg);
+          item.el.removeEventListener('pointerup', onUpImg);
+          pushHistory();
+        }
+        item.el.addEventListener('pointermove', onMoveImg);
+        item.el.addEventListener('pointerup', onUpImg);
+        return;
+      }
       e.preventDefault();
       selectItem(item.id);
       item.el.classList.add('dragging');
@@ -1065,11 +1140,12 @@
       });
       item.editEl.addEventListener('blur', () => { exitTextEdit(item); });
     }
-    // 図形のダブルクリックで中に文字を入力できるようにする
+    // 図形に画像が入っている場合、ダブルクリックで画像の位置調整モードに入る
+    // （図形自体に文字を入れる機能はテキストツールと役割が重複するため廃止した）
     if(item.type === 'shape'){
       item.el.addEventListener('dblclick', e => {
         e.stopPropagation();
-        enterShapeTextEdit(item);
+        if(item.fillImage) enterShapeImageAdjust(item);
       });
     }
   }
@@ -1112,7 +1188,7 @@
       ? `${Math.max(0.5, item.fontSize*item.outlineWidth/100)}px ${item.outlineColor}`
       : '0px transparent';
     item.editEl.style.textShadow = item.shadow
-      ? `${item.fontSize*0.05}px ${item.fontSize*0.06}px ${item.fontSize*0.1}px rgba(0,0,0,.55)`
+      ? `${item.fontSize*0.05*(item.shadowStrength||1)}px ${item.fontSize*0.06*(item.shadowStrength||1)}px ${item.fontSize*0.1*(item.shadowStrength||1)}px rgba(0,0,0,.55)`
       : 'none';
     item.bgEl.style.background = item.bgColor || 'transparent';
     applyArcModeVisibility(item);
@@ -1154,7 +1230,7 @@
       span.style.fontStyle = item.italic ? 'italic' : 'normal';
       span.style.webkitTextStroke = strokeW;
       span.style.textShadow = item.shadow
-        ? `${item.fontSize*0.05}px ${item.fontSize*0.06}px ${item.fontSize*0.1}px rgba(0,0,0,.55)`
+        ? `${item.fontSize*0.05*(item.shadowStrength||1)}px ${item.fontSize*0.06*(item.shadowStrength||1)}px ${item.fontSize*0.1*(item.shadowStrength||1)}px rgba(0,0,0,.55)`
         : 'none';
       container.appendChild(span);
     });
@@ -1167,6 +1243,23 @@
     item.fontFamily = fontSelect.value;
     refreshTextVisuals(item);
     pushHistory();
+  });
+  textFontSizeInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.fontSize = parseInt(textFontSizeInput.value, 10) || 10;
+    refreshTextVisuals(item);
+  });
+  textFontSizeInput.addEventListener('change', () => pushHistory());
+  textEyedropperBtn.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    startEyedropper(hex => {
+      textColorInput.value = hex;
+      item.color = hex;
+      refreshTextVisuals(item);
+      pushHistory();
+    });
   });
   textColorInput.addEventListener('input', () => {
     const item = getItem(selectedId);
@@ -1221,9 +1314,17 @@
     if(!item || item.type !== 'text') return;
     item.shadow = !item.shadow;
     shadowChip.classList.toggle('on', item.shadow);
+    shadowOptionsEl.style.display = item.shadow ? 'flex' : 'none';
     refreshTextVisuals(item);
     pushHistory();
   });
+  shadowSizeInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.shadowStrength = (parseInt(shadowSizeInput.value, 10) || 100) / 100;
+    refreshTextVisuals(item);
+  });
+  shadowSizeInput.addEventListener('change', () => pushHistory());
   italicChip.addEventListener('click', () => {
     const item = getItem(selectedId);
     if(!item || item.type !== 'text') return;
@@ -1410,6 +1511,29 @@
     const item = getItem(selectedId);
     if(item && item.type === 'image') enterCropMode(item);
   });
+  flipXBtn.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.flipX = !item.flipX;
+    applyImageFlip(item);
+    flipXBtn.classList.toggle('on', item.flipX);
+    pushHistory();
+  });
+  flipYBtn.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.flipY = !item.flipY;
+    applyImageFlip(item);
+    flipYBtn.classList.toggle('on', item.flipY);
+    pushHistory();
+  });
+  imageOpacityInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.opacity = (parseInt(imageOpacityInput.value, 10) || 0) / 100;
+    item.imgEl.style.opacity = item.opacity;
+  });
+  imageOpacityInput.addEventListener('change', () => pushHistory());
   cropApplyBtn.addEventListener('click', () => {
     const item = getItem(selectedId);
     if(item) exitCropMode(item, true);
@@ -1435,7 +1559,12 @@
 
     const rotation = opts.rotation || 0;
     if(rotation) el.style.transform = `rotate(${rotation}deg)`;
-    const item = { id, type:'image', img, x, y, w, h, rotation, el, contentEl: content, handlesEl, cropping:false };
+    const item = {
+      id, type:'image', img, x, y, w, h, rotation, el, contentEl: content, handlesEl, imgEl: inner,
+      flipX: !!opts.flipX, flipY: !!opts.flipY, opacity: opts.opacity != null ? opts.opacity : 1, cropping:false
+    };
+    applyImageFlip(item);
+    inner.style.opacity = item.opacity;
     el.appendChild(buildCropOverlay(item));
     items.push(item);
     reflectOrder(); // 新規追加時にも明示的な重なり順(z-index)を必ず反映させる
@@ -1445,6 +1574,12 @@
     updateAllHandleSizes();
     if(opts.pushHist !== false) pushHistory();
     return item;
+  }
+  function applyImageFlip(item){
+    const parts = [];
+    if(item.flipX) parts.push('scaleX(-1)');
+    if(item.flipY) parts.push('scaleY(-1)');
+    item.imgEl.style.transform = parts.length ? parts.join(' ') : 'none';
   }
 
   function createTextItem(text, x, y, w, h, opts){
@@ -1484,7 +1619,7 @@
       color: opts.color || '#ffffff',
       bgColor: opts.bgColor != null ? opts.bgColor : null,
       outline: !!opts.outline, outlineColor: opts.outlineColor || '#000000', outlineWidth: opts.outlineWidth || 12,
-      shadow: !!opts.shadow, italic: !!opts.italic,
+      shadow: !!opts.shadow, shadowStrength: opts.shadowStrength || 1, italic: !!opts.italic,
       arc: opts.arc || 0, arcEnabled: !!opts.arcEnabled,
       editing: false, cropping:false
     };
@@ -1834,7 +1969,7 @@
       ['Z']
     ];
   }
-  const ADVANCED_SHAPE_TYPES = ['triangle','diamond','pentagon','hexagon','star','heart','parallelogram','rounded-rect','pill'];
+  const ADVANCED_SHAPE_TYPES = ['triangle','diamond','pentagon','hexagon','star','heart','parallelogram','rounded-rect','pill','arch-top','arrow','arrow-double','speech-bubble'];
   // w,h,sw を受け取り、そのシェイプのパスコマンド列(絶対座標 0..w, 0..h)を返す。
   // rect/ellipse はそれぞれ専用の描画をするのでnullを返す。
   function shapeCommands(shapeType, w, h, sw){
@@ -1856,6 +1991,74 @@
       }
       case 'rounded-rect': return roundedRectCommands(x0, y0, bw, bh, Math.min(bw, bh)*0.16);
       case 'pill': return roundedRectCommands(x0, y0, bw, bh, bh/2);
+      case 'arch-top': {
+        const archY = y0 + bh*0.3; // 上から30%の高さまでを弧にする
+        return [
+          ['M', x0, y1],
+          ['L', x1, y1],
+          ['L', x1, archY],
+          ['C', x1, y0, x0, y0, x0, archY],
+          ['L', x0, y1],
+          ['Z']
+        ];
+      }
+      case 'arrow': {
+        // 右向き矢印（回転させれば上下左右どの向きにも使える）
+        const headLen = bw*0.35;
+        const shaftHalf = bh*0.2;
+        const shaftEndX = x1 - headLen;
+        return [
+          ['M', x0, cy-shaftHalf],
+          ['L', shaftEndX, cy-shaftHalf],
+          ['L', shaftEndX, y0],
+          ['L', x1, cy],
+          ['L', shaftEndX, y1],
+          ['L', shaftEndX, cy+shaftHalf],
+          ['L', x0, cy+shaftHalf],
+          ['Z']
+        ];
+      }
+      case 'arrow-double': {
+        // 両方向矢印
+        const headLen = bw*0.28;
+        const shaftHalf = bh*0.2;
+        const leftShaftX = x0+headLen, rightShaftX = x1-headLen;
+        return [
+          ['M', x0, cy],
+          ['L', leftShaftX, y0],
+          ['L', leftShaftX, cy-shaftHalf],
+          ['L', rightShaftX, cy-shaftHalf],
+          ['L', rightShaftX, y0],
+          ['L', x1, cy],
+          ['L', rightShaftX, y1],
+          ['L', rightShaftX, cy+shaftHalf],
+          ['L', leftShaftX, cy+shaftHalf],
+          ['L', leftShaftX, y1],
+          ['Z']
+        ];
+      }
+      case 'speech-bubble': {
+        const r = Math.min(bw, bh)*0.12;
+        const k = 0.5522847498;
+        const bodyBottom = y0 + bh*0.78;
+        const tailBaseLeftX = x0 + bw*0.16, tailBaseRightX = x0 + bw*0.34;
+        const tailTipX = x0 + bw*0.18;
+        return [
+          ['M', x0+r, y0],
+          ['L', x1-r, y0],
+          ['C', x1-r+k*r, y0, x1, y0+r-k*r, x1, y0+r],
+          ['L', x1, bodyBottom-r],
+          ['C', x1, bodyBottom-r+k*r, x1-r+k*r, bodyBottom, x1-r, bodyBottom],
+          ['L', tailBaseRightX, bodyBottom],
+          ['L', tailTipX, y1],
+          ['L', tailBaseLeftX, bodyBottom],
+          ['L', x0+r, bodyBottom],
+          ['C', x0+r-k*r, bodyBottom, x0, bodyBottom-r+k*r, x0, bodyBottom-r],
+          ['L', x0, y0+r],
+          ['C', x0, y0+r-k*r, x0+r-k*r, y0, x0+r, y0],
+          ['Z']
+        ];
+      }
       default: return null;
     }
   }
@@ -1880,11 +2083,26 @@
       rect:'shape_rect_label', ellipse:'shape_ellipse_label', 'rounded-rect':'shape_rounded_rect_label',
       pill:'shape_pill_label', triangle:'shape_triangle_label', diamond:'shape_diamond_label',
       pentagon:'shape_pentagon_label', hexagon:'shape_hexagon_label', star:'shape_star_label',
-      heart:'shape_heart_label', parallelogram:'shape_parallelogram_label'
+      heart:'shape_heart_label', parallelogram:'shape_parallelogram_label', 'arch-top':'shape_arch_top_label',
+      arrow:'shape_arrow_label', 'arrow-double':'shape_arrow_double_label', 'speech-bubble':'shape_speech_bubble_label'
     };
     return t(map[shapeType] || 'shape_rect_label');
   }
 
+  // 図形に入れた画像の表示位置・サイズを計算する（中央基準のcoverフィット + 手動オフセット/拡大率）。
+  // オフセットは常にこの関数内でクランプするので、保存値自体は多少はみ出していても表示は破綻しない。
+  function shapeImagePlacement(item){
+    const scale = Math.max(1, item.fillImageScale || 1);
+    const ir = item.fillImage.naturalWidth / item.fillImage.naturalHeight;
+    const br = item.w / item.h;
+    let dw, dh;
+    if(ir > br){ dh = item.h*scale; dw = dh*ir; } else { dw = item.w*scale; dh = dw/ir; }
+    const maxOffX = Math.max(0, (dw - item.w)/2);
+    const maxOffY = Math.max(0, (dh - item.h)/2);
+    const offX = Math.max(-maxOffX, Math.min(maxOffX, item.fillImageOffsetX || 0));
+    const offY = Math.max(-maxOffY, Math.min(maxOffY, item.fillImageOffsetY || 0));
+    return { dw, dh, x: (item.w-dw)/2+offX, y: (item.h-dh)/2+offY, maxOffX, maxOffY };
+  }
   function renderShapeSVG(item){
     const sw = item.strokeWidth;
     const fill = item.fillImage ? 'none' : (item.fillColor || 'none');
@@ -1912,7 +2130,8 @@
         clipShape = `<rect x="${inset}" y="${inset}" width="${Math.max(0,item.w-sw)}" height="${Math.max(0,item.h-sw)}"/>`;
       }
       clipDefs = `<defs><clipPath id="${clipId}">${clipShape}</clipPath></defs>`;
-      imageTag = `<image href="${item.fillImage.src}" x="0" y="0" width="${item.w}" height="${item.h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>`;
+      const p = shapeImagePlacement(item);
+      imageTag = `<image href="${item.fillImage.src}" x="${p.x}" y="${p.y}" width="${p.dw}" height="${p.dh}" clip-path="url(#${clipId})"/>`;
     }
     const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
     svg.setAttribute('viewBox', `0 0 ${item.w} ${item.h}`);
@@ -1942,12 +2161,14 @@
       strokeColor: opts.strokeColor || '#ffffff',
       strokeWidth: opts.strokeWidth != null ? opts.strokeWidth : 4,
       fillImage: opts.fillImage || null,
-      shapeText: opts.shapeText || '',
-      shapeTextEditing: false,
+      fillImageOffsetX: opts.fillImageOffsetX || 0,
+      fillImageOffsetY: opts.fillImageOffsetY || 0,
+      fillImageScale: opts.fillImageScale || 1,
+      imageAdjusting: false,
       cropping:false
     };
     renderShapeSVG(item);
-    buildShapeTextEl(item);
+    buildShapeImageAdjustHint(item);
     items.push(item);
     reflectOrder(); // 新規追加時にも明示的な重なり順(z-index)を必ず反映させる
     bindItemInteractions(item);
@@ -1957,33 +2178,36 @@
     return item;
   }
 
-  // ---- 図形の中に入れる文字 ----
-  function buildShapeTextEl(item){
-    if(item.shapeTextEl) item.shapeTextEl.remove();
+  // ---- 図形に入れた画像の位置・拡大率を調整するモード ----
+  function buildShapeImageAdjustHint(item){
     const el = document.createElement('div');
-    el.className = 'shape-text-edit';
-    el.contentEditable = 'false'; // 編集中だけtrueにする（タッチでリサイズハンドルが横取りされるのを防ぐ）
-    el.spellcheck = false;
-    el.textContent = item.shapeText || '';
-    el.style.display = item.shapeText ? 'flex' : 'none';
-    el.addEventListener('pointerdown', e => { if(item.shapeTextEditing) e.stopPropagation(); });
-    el.addEventListener('input', () => { item.shapeText = el.textContent; });
-    el.addEventListener('blur', () => {
-      item.shapeTextEditing = false;
-      item.shapeText = el.textContent;
-      el.contentEditable = 'false';
-      el.style.display = item.shapeText ? 'flex' : 'none';
-      pushHistory();
-    });
+    el.className = 'shape-image-adjust-hint';
+    el.textContent = t('shape_image_adjust_hint');
+    el.style.display = 'none';
     item.contentEl.appendChild(el);
-    item.shapeTextEl = el;
+    item.imageAdjustHintEl = el;
   }
-  function enterShapeTextEdit(item){
-    item.shapeTextEditing = true;
-    item.shapeTextEl.contentEditable = 'true';
-    item.shapeTextEl.style.display = 'flex';
-    item.shapeTextEl.focus();
-    document.getSelection().selectAllChildren(item.shapeTextEl);
+  function enterShapeImageAdjust(item){
+    if(item.imageAdjusting) return;
+    item.imageAdjusting = true;
+    item.el.classList.add('image-adjust-active');
+    if(item.imageAdjustHintEl) item.imageAdjustHintEl.style.display = 'flex';
+    // 図形の外側を押したら自動的に調整モードを終える
+    setTimeout(() => {
+      function onOutside(e){
+        if(item.el.contains(e.target)) return;
+        document.removeEventListener('pointerdown', onOutside);
+        exitShapeImageAdjust(item);
+      }
+      document.addEventListener('pointerdown', onOutside);
+    }, 0);
+  }
+  function exitShapeImageAdjust(item){
+    if(!item.imageAdjusting) return;
+    item.imageAdjusting = false;
+    item.el.classList.remove('image-adjust-active');
+    if(item.imageAdjustHintEl) item.imageAdjustHintEl.style.display = 'none';
+    pushHistory();
   }
   // 図形の画像を設定/解除
   function setShapeFillImage(item, file){
@@ -1993,6 +2217,9 @@
       const img = new Image();
       img.onload = () => {
         item.fillImage = img;
+        item.fillImageOffsetX = 0;
+        item.fillImageOffsetY = 0;
+        item.fillImageScale = 1;
         renderShapeSVG(item);
         if(selectedId === item.id) selectItem(item.id);
         pushHistory();
@@ -2030,6 +2257,11 @@
       const x = Math.round((canvasW-w)/2), y = Math.round((canvasH-h)/2);
       createShapeItem('rect', x, y, w, h);
     }
+    // text/table/line/shape は「作ったら終わり」の単発操作なので、選んだままにしておくと
+    // 同じ項目をもう一度選んでも(値が変わらないため)changeイベントが発火せず、
+    // 続けて追加できなくなってしまう。そのため単発操作の時だけプレースホルダーに戻す。
+    // （手描きは唯一「ON/OFFが続くモード」なので、選んだ状態を保つ）
+    if(v && v !== 'draw') addMenuSelect.value = '';
   });
 
   // ---- 画像追加のUI（クリック / ドラッグ&ドロップ） ----
@@ -2111,6 +2343,8 @@
     const cx = item.x + item.w/2, cy = item.y + item.h/2;
     ctx.translate(cx, cy);
     ctx.rotate(item.rotation * Math.PI/180);
+    ctx.scale(item.flipX ? -1 : 1, item.flipY ? -1 : 1);
+    ctx.globalAlpha = item.opacity != null ? item.opacity : 1;
     ctx.drawImage(item.img, -item.w/2, -item.h/2, item.w, item.h);
     ctx.restore();
   }
@@ -2197,12 +2431,9 @@
     if(item.fillImage){
       ctx.save();
       ctx.clip();
-      // 図形を覆うように、画像をアスペクト比を保って中央にトリミング配置（cover）
-      const ir = item.fillImage.naturalWidth / item.fillImage.naturalHeight;
-      const br = item.w / item.h;
-      let dw, dh;
-      if(ir > br){ dh = item.h; dw = dh*ir; } else { dw = item.w; dh = dw/ir; }
-      ctx.drawImage(item.fillImage, -dw/2, -dh/2, dw, dh);
+      // 図形を覆うように、画像をアスペクト比を保って配置（cover + 手動オフセット/拡大率）
+      const p = shapeImagePlacement(item);
+      ctx.drawImage(item.fillImage, -item.w/2+p.x, -item.h/2+p.y, p.dw, p.dh);
       ctx.restore();
     } else if(item.fillColor){
       ctx.fillStyle = item.fillColor; ctx.fill();
@@ -2210,16 +2441,6 @@
     if(item.strokeWidth > 0){
       traceShapePath(ctx, item, 0, 0);
       ctx.strokeStyle = item.strokeColor; ctx.lineWidth = item.strokeWidth; ctx.stroke();
-    }
-    if(item.shapeText){
-      const fontSize = Math.max(9, Math.min(item.h, item.w)*0.16);
-      ctx.font = `900 ${fontSize}px "Zen Kaku Gothic New", "Hiragino Sans", sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#ffffff';
-      const lines = wrapText(ctx, item.shapeText, item.w*0.82);
-      const lineHeight = fontSize*1.2;
-      let ty = -((lines.length-1)*lineHeight)/2;
-      lines.forEach(line => { ctx.fillText(line, 0, ty); ty += lineHeight; });
     }
     ctx.restore();
   }
@@ -2241,9 +2462,9 @@
       if(item.shadow){
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,.55)';
-        ctx.shadowBlur = item.fontSize*0.1;
-        ctx.shadowOffsetX = item.fontSize*0.05;
-        ctx.shadowOffsetY = item.fontSize*0.06;
+        ctx.shadowBlur = item.fontSize*0.1*(item.shadowStrength||1);
+        ctx.shadowOffsetX = item.fontSize*0.05*(item.shadowStrength||1);
+        ctx.shadowOffsetY = item.fontSize*0.06*(item.shadowStrength||1);
         if(item.outline){
           ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
           ctx.strokeStyle = item.outlineColor;
@@ -2290,9 +2511,9 @@
       if(item.shadow){
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,.55)';
-        ctx.shadowBlur = item.fontSize*0.1;
-        ctx.shadowOffsetX = item.fontSize*0.05;
-        ctx.shadowOffsetY = item.fontSize*0.06;
+        ctx.shadowBlur = item.fontSize*0.1*(item.shadowStrength||1);
+        ctx.shadowOffsetX = item.fontSize*0.05*(item.shadowStrength||1);
+        ctx.shadowOffsetY = item.fontSize*0.06*(item.shadowStrength||1);
         if(item.outline){
           ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
           ctx.strokeStyle = item.outlineColor;
@@ -2329,7 +2550,8 @@
   }
 
   // ---- ダウンロード ----
-  downloadBtn.addEventListener('click', async () => {
+  // ---- 現在のキャンバスの見た目を1枚のcanvasに合成する（PNG書き出し・スポイトの両方で使う） ----
+  async function renderCompositeToCanvas(){
     if(document.fonts && document.fonts.ready) await document.fonts.ready;
     for(const item of items){
       if(item.type === 'table'){
@@ -2347,6 +2569,44 @@
       else if(item.type === 'shape') drawShapeItem(ctx, item);
     }
     if(drawLayerVisible) ctx.drawImage(drawLayer, 0, 0); // 手描きレイヤーは一番上に重ねる
+    return cv;
+  }
+
+  // ---- スポイト（キャンバス上の色を拾う） ----
+  // ブラウザ標準のEyeDropper APIが使えればそれを使う（画面上どこでも拾える）。
+  // 使えないブラウザでは、キャンバスをクリックした位置の色を自前で読み取るフォールバックを使う。
+  let eyedropperActive = false;
+  function startEyedropper(applyColorFn){
+    if(window.EyeDropper){
+      new window.EyeDropper().open().then(result => applyColorFn(result.sRGBHex)).catch(() => {});
+      return;
+    }
+    if(eyedropperActive) return;
+    eyedropperActive = true;
+    stageWrap.classList.add('eyedropper-active');
+    function cleanup(){
+      eyedropperActive = false;
+      stageWrap.classList.remove('eyedropper-active');
+      document.removeEventListener('pointerdown', onPick, true);
+    }
+    async function onPick(e){
+      e.preventDefault();
+      e.stopPropagation();
+      cleanup();
+      if(!stageWrap.contains(e.target)) return; // キャンバスの外をクリックしたらキャンセル扱い
+      const pt = stagePointFromEvent(e);
+      const cv = await renderCompositeToCanvas();
+      const x = Math.floor(pt.x), y = Math.floor(pt.y);
+      if(x < 0 || y < 0 || x >= cv.width || y >= cv.height) return;
+      const data = cv.getContext('2d').getImageData(x, y, 1, 1).data;
+      const hex = '#' + [data[0], data[1], data[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+      applyColorFn(hex);
+    }
+    document.addEventListener('pointerdown', onPick, true);
+  }
+
+  downloadBtn.addEventListener('click', async () => {
+    const cv = await renderCompositeToCanvas();
     const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2372,7 +2632,7 @@
       hasDrawing,
       items: items.map(it => {
         if(it.type === 'image'){
-          return { type:'image', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation, src: it.img.src };
+          return { type:'image', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation, src: it.img.src, flipX: !!it.flipX, flipY: !!it.flipY, opacity: it.opacity != null ? it.opacity : 1 };
         }
         if(it.type === 'table'){
           return {
@@ -2389,14 +2649,16 @@
           return {
             type:'shape', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation,
             shapeType: it.shapeType, fillColor: it.fillColor, strokeColor: it.strokeColor, strokeWidth: it.strokeWidth,
-            fillImageSrc: it.fillImage ? it.fillImage.src : null, shapeText: it.shapeText
+            fillImageSrc: it.fillImage ? it.fillImage.src : null,
+            fillImageOffsetX: it.fillImageOffsetX || 0, fillImageOffsetY: it.fillImageOffsetY || 0,
+            fillImageScale: it.fillImageScale || 1
           };
         }
         return {
           type:'text', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation,
           text: it.text, fontSize: it.fontSize, fontFamily: it.fontFamily, color: it.color, bgColor: it.bgColor,
           outline: it.outline, outlineColor: it.outlineColor, outlineWidth: it.outlineWidth,
-          shadow: it.shadow, italic: it.italic, arc: it.arc, arcEnabled: it.arcEnabled
+          shadow: it.shadow, shadowStrength: it.shadowStrength, italic: it.italic, arc: it.arc, arcEnabled: it.arcEnabled
         };
       })
     };
@@ -2449,7 +2711,7 @@
 
     snapshot.items.forEach((data, i) => {
       if(data.type === 'image'){
-        createImageItem(loaded[i], data.x, data.y, data.w, data.h, { rotation:data.rotation, autoSelect:false, pushHist:false });
+        createImageItem(loaded[i], data.x, data.y, data.w, data.h, { rotation:data.rotation, flipX:data.flipX, flipY:data.flipY, opacity:data.opacity, autoSelect:false, pushHist:false });
       } else if(data.type === 'table'){
         createTableItem(data.rows, data.cols, data.x, data.y, data.w, data.h, { rotation:data.rotation, cells:data.cells, cellImages:data.cellImages, colWidths:data.colWidths, rowHeights:data.rowHeights, autoSelect:false, pushHist:false });
       } else if(data.type === 'line'){
@@ -2457,7 +2719,9 @@
       } else if(data.type === 'shape'){
         createShapeItem(data.shapeType, data.x, data.y, data.w, data.h, {
           rotation:data.rotation, fillColor:data.fillColor, strokeColor:data.strokeColor, strokeWidth:data.strokeWidth,
-          fillImage: loadedShapeFills[i], shapeText: data.shapeText, autoSelect:false, pushHist:false
+          fillImage: loadedShapeFills[i],
+          fillImageOffsetX: data.fillImageOffsetX, fillImageOffsetY: data.fillImageOffsetY, fillImageScale: data.fillImageScale,
+          autoSelect:false, pushHist:false
         });
       } else {
         createTextItem(data.text, data.x, data.y, data.w, data.h, { ...data, autoSelect:false, pushHist:false });
@@ -2493,6 +2757,10 @@
     const key = e.key.toLowerCase();
     if((e.ctrlKey || e.metaKey) && key === 'z' && !e.shiftKey){ e.preventDefault(); undo(); }
     else if((e.ctrlKey || e.metaKey) && (key === 'y' || (key === 'z' && e.shiftKey))){ e.preventDefault(); redo(); }
+    else if(key === 'escape'){
+      const sel = getItem(selectedId);
+      if(sel && sel.type === 'shape' && sel.imageAdjusting) exitShapeImageAdjust(sel);
+    }
     else if((key === 'delete' || key === 'backspace') && selectedId != null){
       const sel = getItem(selectedId);
       // テキスト編集中や、他の入力欄にフォーカスがある時は誤って要素ごと削除しないようにする

@@ -245,6 +245,8 @@ main{
   cursor:pointer;
 }
 .row-inline{ display:flex; align-items:center; gap:8px; }
+.eyedropper-btn{ padding:6px 10px; font-size:14px; line-height:1; flex:0 0 auto; }
+.stage-wrap.eyedropper-active, .stage-wrap.eyedropper-active .placed-item{ cursor:crosshair !important; }
 .history-btns{ display:flex; gap:8px; }
 .history-btns .ghost{ flex:1; }
 .icon-btn{
@@ -287,6 +289,31 @@ main{
 .chip:hover{ border-color:var(--muted); }
 .chip.on{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:700; }
 .panel-box input[type=range]{ width:100%; accent-color:var(--accent); }
+#shapeImageAdjustGroup{ display:flex; flex-direction:column; gap:8px; }
+
+/* 図形の画像位置調整モード */
+.placed-item.image-adjust-active{ cursor:move; }
+.placed-item.image-adjust-active::before{
+  border-color:var(--accent);
+  border-style:dashed;
+}
+.shape-image-adjust-hint{
+  position:absolute;
+  left:50%; bottom:6px;
+  transform:translateX(-50%);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.72);
+  color:#fff;
+  font-size:11px;
+  font-family:var(--sans);
+  padding:5px 10px;
+  border-radius:20px;
+  white-space:nowrap;
+  pointer-events:none;
+  z-index:20;
+}
 .crop-controls{ flex-direction:row; }
 .crop-controls .ghost{ flex:1; }
 
@@ -503,24 +530,6 @@ main{
 /* ---------- 線・図形 ---------- */
 .line-content, .shape-content{ width:100%; height:100%; overflow:visible; position:relative; }
 .line-content svg, .shape-content svg{ width:100%; height:100%; display:block; overflow:visible; }
-.shape-text-edit{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  text-align:center;
-  padding:6%;
-  color:#fff;
-  font-weight:900;
-  font-family:var(--sans);
-  white-space:pre-wrap;
-  word-break:break-word;
-  outline:none;
-  cursor:inherit;
-}
-.shape-text-edit:focus{ cursor:text; }
-.shape-text-edit:empty::before{
-  content:attr(data-placeholder);
-  opacity:.35;
-}
 
 /* 選択枠 */
 .placed-item::before{
