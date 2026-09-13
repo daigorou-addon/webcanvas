@@ -41,7 +41,18 @@
   const flipXBtn = document.getElementById('flipXBtn');
   const flipYBtn = document.getElementById('flipYBtn');
   const imageOpacityInput = document.getElementById('imageOpacity');
-  const cropApplyBtn = document.getElementById('cropApply');
+  const imageBrightnessInput = document.getElementById('imageBrightness');
+  const imageContrastInput = document.getElementById('imageContrast');
+  const imageBlurInput = document.getElementById('imageBlur');
+  const imageMosaicInput = document.getElementById('imageMosaic');
+  const radialLinesChip = document.getElementById('radialLinesChip');
+  const radialLinesOptionsEl = document.getElementById('radialLinesOptions');
+  const radialLinesColorInput = document.getElementById('radialLinesColor');
+  const radialLinesDensityInput = document.getElementById('radialLinesDensity');
+  const imageEraserBtn = document.getElementById('imageEraserBtn');
+  const imageEraserOptionsEl = document.getElementById('imageEraserOptions');
+  const imageEraserSizeInput = document.getElementById('imageEraserSize');
+  const imageEraserDoneBtn = document.getElementById('imageEraserDoneBtn');  const cropApplyBtn = document.getElementById('cropApply');
   const cropCancelBtn = document.getElementById('cropCancel');
   const tableOptionsEl = document.getElementById('tableOptions');
   const deleteTableBtn = document.getElementById('deleteTableBtn');
@@ -429,6 +440,11 @@
 
   function selectItem(id){
     if(id != null) deactivateDrawMode(); // 要素を選んだら手描きモードは自動的に解除する
+    // 選択が変わる前に、消しゴム編集中の画像があれば自動的に確定させておく
+    if(selectedId !== id){
+      const prevSel = getItem(selectedId);
+      if(prevSel && prevSel.type === 'image' && prevSel.eraserActive) finishImageEraser(prevSel, true);
+    }
     selectedId = id;
     items.forEach(it => it.el.classList.toggle('selected', it.id === id));
     reflectOrder(); // まず全要素を配列順どおりのz-indexに戻す
@@ -449,6 +465,15 @@
       flipXBtn.classList.toggle('on', !!sel.flipX);
       flipYBtn.classList.toggle('on', !!sel.flipY);
       imageOpacityInput.value = Math.round((sel.opacity != null ? sel.opacity : 1) * 100);
+      imageBrightnessInput.value = Math.round(sel.brightness * 100);
+      imageContrastInput.value = Math.round(sel.contrast * 100);
+      imageBlurInput.value = sel.blurAmount;
+      imageMosaicInput.value = sel.mosaicSize;
+      radialLinesChip.classList.toggle('on', sel.radialLines);
+      radialLinesOptionsEl.style.display = sel.radialLines ? 'flex' : 'none';
+      radialLinesColorInput.value = sel.radialLinesColor;
+      radialLinesDensityInput.value = sel.radialLinesDensity;
+      imageEraserOptionsEl.style.display = sel.eraserActive ? 'flex' : 'none';
     }
     tableOptionsEl.style.display = showTable ? 'flex' : 'none';
     lineOptionsEl.style.display = showLine ? 'flex' : 'none';
@@ -918,6 +943,51 @@
         }
         item.el.addEventListener('pointermove', onMoveImg);
         item.el.addEventListener('pointerup', onUpImg);
+        return;
+      }
+      if(item.type === 'image' && item.eraserActive){
+        // 消しゴムモード中は、画像をドラッグする代わりにその部分を透明にする
+        e.preventDefault();
+        e.stopPropagation();
+        const nw = item.img.naturalWidth, nh = item.img.naturalHeight;
+        const work = item.eraseWorkCanvas;
+        const wctx = work.getContext('2d');
+        function localNaturalPoint(ev){
+          const pt = stagePointFromEvent(ev);
+          const cx2 = item.x + item.w/2, cy2 = item.y + item.h/2;
+          const dx = pt.x - cx2, dy = pt.y - cy2;
+          const rad = -item.rotation * Math.PI/180;
+          const rx = dx*Math.cos(rad) - dy*Math.sin(rad);
+          const ry = dx*Math.sin(rad) + dy*Math.cos(rad);
+          let lx = rx + item.w/2, ly = ry + item.h/2;
+          if(item.flipX) lx = item.w - lx;
+          if(item.flipY) ly = item.h - ly;
+          return { x: lx/item.w*nw, y: ly/item.h*nh, inside: lx >= 0 && ly >= 0 && lx < item.w && ly < item.h };
+        }
+        function eraseAt(p){
+          const brushNatural = (parseInt(imageEraserSizeInput.value, 10) || 30) / item.w * nw;
+          wctx.save();
+          wctx.globalCompositeOperation = 'destination-out';
+          wctx.beginPath();
+          wctx.arc(p.x, p.y, brushNatural/2, 0, Math.PI*2);
+          wctx.fill();
+          wctx.restore();
+        }
+        const p0 = localNaturalPoint(e);
+        if(p0.inside) eraseAt(p0);
+        item.imgEl.src = work.toDataURL();
+        item.el.setPointerCapture(e.pointerId);
+        function onEraseMove(ev){
+          const p = localNaturalPoint(ev);
+          if(p.inside) eraseAt(p);
+          item.imgEl.src = work.toDataURL();
+        }
+        function onEraseUp(){
+          item.el.removeEventListener('pointermove', onEraseMove);
+          item.el.removeEventListener('pointerup', onEraseUp);
+        }
+        item.el.addEventListener('pointermove', onEraseMove);
+        item.el.addEventListener('pointerup', onEraseUp);
         return;
       }
       e.preventDefault();
@@ -1527,6 +1597,16 @@
     flipYBtn.classList.toggle('on', item.flipY);
     pushHistory();
   });
+  // ---- スライダーの「標準値に戻す」ボタン共通処理 ----
+  function bindSliderReset(btn, input, defaultVal){
+    if(!btn) return;
+    btn.addEventListener('click', () => {
+      input.value = defaultVal;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+
   imageOpacityInput.addEventListener('input', () => {
     const item = getItem(selectedId);
     if(!item || item.type !== 'image') return;
@@ -1534,6 +1614,66 @@
     item.imgEl.style.opacity = item.opacity;
   });
   imageOpacityInput.addEventListener('change', () => pushHistory());
+  imageBrightnessInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.brightness = (parseInt(imageBrightnessInput.value, 10) || 100) / 100;
+    refreshImageFilters(item);
+  });
+  imageBrightnessInput.addEventListener('change', () => pushHistory());
+  imageContrastInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.contrast = (parseInt(imageContrastInput.value, 10) || 100) / 100;
+    refreshImageFilters(item);
+  });
+  imageContrastInput.addEventListener('change', () => pushHistory());
+  imageBlurInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.blurAmount = parseInt(imageBlurInput.value, 10) || 0;
+    refreshImageFilters(item);
+  });
+  imageBlurInput.addEventListener('change', () => pushHistory());
+  imageMosaicInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.mosaicSize = parseInt(imageMosaicInput.value, 10) || 0;
+    refreshImageFilters(item);
+  });
+  imageMosaicInput.addEventListener('change', () => pushHistory());
+  radialLinesChip.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.radialLines = !item.radialLines;
+    radialLinesChip.classList.toggle('on', item.radialLines);
+    radialLinesOptionsEl.style.display = item.radialLines ? 'flex' : 'none';
+    refreshImageFilters(item);
+    pushHistory();
+  });
+  radialLinesColorInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.radialLinesColor = radialLinesColorInput.value;
+    refreshImageFilters(item);
+  });
+  radialLinesColorInput.addEventListener('change', () => pushHistory());
+  radialLinesDensityInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.radialLinesDensity = parseInt(radialLinesDensityInput.value, 10) || 50;
+    refreshImageFilters(item);
+  });
+  radialLinesDensityInput.addEventListener('change', () => pushHistory());
+  bindSliderReset(document.getElementById('imageOpacityReset'), imageOpacityInput, 100);
+  bindSliderReset(document.getElementById('imageBrightnessReset'), imageBrightnessInput, 100);
+  bindSliderReset(document.getElementById('imageContrastReset'), imageContrastInput, 100);
+  bindSliderReset(document.getElementById('imageBlurReset'), imageBlurInput, 0);
+  bindSliderReset(document.getElementById('imageMosaicReset'), imageMosaicInput, 0);
+  bindSliderReset(document.getElementById('radialLinesDensityReset'), radialLinesDensityInput, 50);
+  bindSliderReset(document.getElementById('shadowSizeReset'), shadowSizeInput, 100);
+  bindSliderReset(document.getElementById('outlineWidthReset'), outlineWidthInput, 12);
+
   cropApplyBtn.addEventListener('click', () => {
     const item = getItem(selectedId);
     if(item) exitCropMode(item, true);
@@ -1561,10 +1701,19 @@
     if(rotation) el.style.transform = `rotate(${rotation}deg)`;
     const item = {
       id, type:'image', img, x, y, w, h, rotation, el, contentEl: content, handlesEl, imgEl: inner,
-      flipX: !!opts.flipX, flipY: !!opts.flipY, opacity: opts.opacity != null ? opts.opacity : 1, cropping:false
+      flipX: !!opts.flipX, flipY: !!opts.flipY, opacity: opts.opacity != null ? opts.opacity : 1,
+      brightness: opts.brightness != null ? opts.brightness : 1,
+      contrast: opts.contrast != null ? opts.contrast : 1,
+      blurAmount: opts.blurAmount || 0,
+      mosaicSize: opts.mosaicSize || 0,
+      radialLines: !!opts.radialLines,
+      radialLinesColor: opts.radialLinesColor || '#000000',
+      radialLinesDensity: opts.radialLinesDensity != null ? opts.radialLinesDensity : 50,
+      eraserActive: false, cropping:false
     };
     applyImageFlip(item);
     inner.style.opacity = item.opacity;
+    refreshImageFilters(item);
     el.appendChild(buildCropOverlay(item));
     items.push(item);
     reflectOrder(); // 新規追加時にも明示的な重なり順(z-index)を必ず反映させる
@@ -1581,6 +1730,121 @@
     if(item.flipY) parts.push('scaleY(-1)');
     item.imgEl.style.transform = parts.length ? parts.join(' ') : 'none';
   }
+
+  // ---- 画像フィルター（明るさ・コントラスト・ぼかし・モザイク・集中線） ----
+  // 常に元画像(item.img)から作り直すので、いつでも非破壊で調整し直せる。
+  function hasActiveImageFilters(item){
+    return !!(item.blurAmount || item.brightness !== 1 || item.contrast !== 1 || item.mosaicSize > 0 || item.radialLines);
+  }
+  // 集中線は毎回描き直しても模様がブレないよう、疑似乱数はindexから決定論的に計算する
+  function pseudoRandom(seed){
+    const v = Math.sin(seed) * 43758.5453;
+    return v - Math.floor(v);
+  }
+  function drawRadialLinesOverlay(ctx, w, h, color, density){
+    const cx = w/2, cy = h/2;
+    const maxR = Math.sqrt(cx*cx + cy*cy) * 1.05;
+    const innerR = maxR * 0.12;
+    const count = Math.round(20 + (density/100) * 140);
+    ctx.save();
+    ctx.strokeStyle = color || '#000000';
+    ctx.globalAlpha = 0.85;
+    ctx.lineCap = 'round';
+    for(let i = 0; i < count; i++){
+      const jitter = (pseudoRandom(i*12.9898) - 0.5) * (Math.PI*2/count) * 0.6;
+      const angle = (i/count) * Math.PI*2 + jitter;
+      ctx.lineWidth = 1 + pseudoRandom(i*78.233) * Math.max(1, w*0.008);
+      const x1 = cx + Math.cos(angle)*innerR, y1 = cy + Math.sin(angle)*innerR;
+      const x2 = cx + Math.cos(angle)*maxR, y2 = cy + Math.sin(angle)*maxR;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function computeFilteredCanvas(item){
+    const src = item.img;
+    const nw = src.naturalWidth, nh = src.naturalHeight;
+    const cv = document.createElement('canvas');
+    cv.width = nw; cv.height = nh;
+    const ctx = cv.getContext('2d');
+    const filters = [];
+    if(item.blurAmount) filters.push(`blur(${item.blurAmount}px)`);
+    if(item.brightness !== 1) filters.push(`brightness(${item.brightness})`);
+    if(item.contrast !== 1) filters.push(`contrast(${item.contrast})`);
+    ctx.filter = filters.length ? filters.join(' ') : 'none';
+    ctx.drawImage(src, 0, 0, nw, nh);
+    if(item.mosaicSize > 0){
+      // 一旦縮小してから拡大描画することでモザイク状にする
+      const block = Math.max(2, item.mosaicSize);
+      const smallW = Math.max(1, Math.round(nw/block));
+      const smallH = Math.max(1, Math.round(nh/block));
+      const small = document.createElement('canvas');
+      small.width = smallW; small.height = smallH;
+      small.getContext('2d').drawImage(cv, 0, 0, smallW, smallH);
+      ctx.filter = 'none';
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, nw, nh);
+      ctx.drawImage(small, 0, 0, smallW, smallH, 0, 0, nw, nh);
+    }
+    if(item.radialLines){
+      drawRadialLinesOverlay(ctx, nw, nh, item.radialLinesColor, item.radialLinesDensity);
+    }
+    return cv;
+  }
+  function refreshImageFilters(item){
+    if(item.eraserActive) return; // 消しゴム中は作業用キャンバスの表示を優先する
+    if(hasActiveImageFilters(item)){
+      item.imgEl.src = computeFilteredCanvas(item).toDataURL('image/png');
+    } else {
+      item.imgEl.src = item.img.src;
+    }
+  }
+
+  // ---- 画像の消しゴム（ドラッグした部分を透明にする） ----
+  function startImageEraser(item){
+    if(item.eraserActive) return;
+    item.eraserActive = true;
+    const nw = item.img.naturalWidth, nh = item.img.naturalHeight;
+    const work = document.createElement('canvas');
+    work.width = nw; work.height = nh;
+    work.getContext('2d').drawImage(item.img, 0, 0);
+    item.eraseWorkCanvas = work;
+    item.el.classList.add('image-erasing');
+    imageEraserOptionsEl.style.display = 'flex';
+    item.imgEl.src = work.toDataURL();
+  }
+  function finishImageEraser(item, commit){
+    if(!item.eraserActive) return;
+    item.eraserActive = false;
+    item.el.classList.remove('image-erasing');
+    imageEraserOptionsEl.style.display = 'none';
+    const work = item.eraseWorkCanvas;
+    item.eraseWorkCanvas = null;
+    if(commit && work){
+      const url = work.toDataURL('image/png');
+      const newImg = new Image();
+      newImg.onload = () => {
+        item.img = newImg;
+        refreshImageFilters(item);
+        pushHistory();
+      };
+      newImg.src = url;
+    } else {
+      refreshImageFilters(item); // キャンセル: フィルター込みの元の状態に戻す
+    }
+  }
+  imageEraserBtn.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    startImageEraser(item);
+  });
+  imageEraserDoneBtn.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    finishImageEraser(item, true);
+  });
 
   function createTextItem(text, x, y, w, h, opts){
     opts = opts || {};
@@ -2345,7 +2609,8 @@
     ctx.rotate(item.rotation * Math.PI/180);
     ctx.scale(item.flipX ? -1 : 1, item.flipY ? -1 : 1);
     ctx.globalAlpha = item.opacity != null ? item.opacity : 1;
-    ctx.drawImage(item.img, -item.w/2, -item.h/2, item.w, item.h);
+    const source = hasActiveImageFilters(item) ? computeFilteredCanvas(item) : item.img;
+    ctx.drawImage(source, -item.w/2, -item.h/2, item.w, item.h);
     ctx.restore();
   }
 
@@ -2632,7 +2897,9 @@
       hasDrawing,
       items: items.map(it => {
         if(it.type === 'image'){
-          return { type:'image', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation, src: it.img.src, flipX: !!it.flipX, flipY: !!it.flipY, opacity: it.opacity != null ? it.opacity : 1 };
+          return { type:'image', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation, src: it.img.src, flipX: !!it.flipX, flipY: !!it.flipY, opacity: it.opacity != null ? it.opacity : 1,
+            brightness: it.brightness, contrast: it.contrast, blurAmount: it.blurAmount, mosaicSize: it.mosaicSize,
+            radialLines: it.radialLines, radialLinesColor: it.radialLinesColor, radialLinesDensity: it.radialLinesDensity };
         }
         if(it.type === 'table'){
           return {
@@ -2711,7 +2978,12 @@
 
     snapshot.items.forEach((data, i) => {
       if(data.type === 'image'){
-        createImageItem(loaded[i], data.x, data.y, data.w, data.h, { rotation:data.rotation, flipX:data.flipX, flipY:data.flipY, opacity:data.opacity, autoSelect:false, pushHist:false });
+        createImageItem(loaded[i], data.x, data.y, data.w, data.h, {
+          rotation:data.rotation, flipX:data.flipX, flipY:data.flipY, opacity:data.opacity,
+          brightness:data.brightness, contrast:data.contrast, blurAmount:data.blurAmount, mosaicSize:data.mosaicSize,
+          radialLines:data.radialLines, radialLinesColor:data.radialLinesColor, radialLinesDensity:data.radialLinesDensity,
+          autoSelect:false, pushHist:false
+        });
       } else if(data.type === 'table'){
         createTableItem(data.rows, data.cols, data.x, data.y, data.w, data.h, { rotation:data.rotation, cells:data.cells, cellImages:data.cellImages, colWidths:data.colWidths, rowHeights:data.rowHeights, autoSelect:false, pushHist:false });
       } else if(data.type === 'line'){

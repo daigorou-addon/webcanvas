@@ -131,11 +131,17 @@
       <div class="sub-panel" id="outlineOptions" style="display:none">
         <label data-i18n="outline_color_label">袋の色</label>
         <input type="color" id="outlineColor" value="#000000">
-        <label data-i18n="outline_width_label">袋の太さ</label>
+        <div class="label-row">
+          <label data-i18n="outline_width_label">袋の太さ</label>
+          <button class="reset-slider-btn" id="outlineWidthReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+        </div>
         <input type="range" id="outlineWidth" min="2" max="30" value="12">
       </div>
       <div class="sub-panel" id="shadowOptions" style="display:none">
-        <label data-i18n="shadow_size_label">影の大きさ</label>
+        <div class="label-row">
+          <label data-i18n="shadow_size_label">影の大きさ</label>
+          <button class="reset-slider-btn" id="shadowSizeReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+        </div>
         <input type="range" id="shadowSize" min="30" max="300" value="100">
       </div>
       <div class="sub-panel" id="arcOptions" style="display:none">
@@ -152,8 +158,50 @@
         <button class="chip" id="flipXBtn" data-i18n="flip_x_btn">左右反転</button>
         <button class="chip" id="flipYBtn" data-i18n="flip_y_btn">上下反転</button>
       </div>
-      <label data-i18n="opacity_label">不透明度</label>
+      <div class="label-row">
+        <label data-i18n="opacity_label">不透明度</label>
+        <button class="reset-slider-btn" id="imageOpacityReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+      </div>
       <input type="range" id="imageOpacity" min="0" max="100" value="100">
+      <div class="label-row">
+        <label data-i18n="brightness_label">明るさ</label>
+        <button class="reset-slider-btn" id="imageBrightnessReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+      </div>
+      <input type="range" id="imageBrightness" min="20" max="200" value="100">
+      <div class="label-row">
+        <label data-i18n="contrast_label">コントラスト</label>
+        <button class="reset-slider-btn" id="imageContrastReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+      </div>
+      <input type="range" id="imageContrast" min="20" max="200" value="100">
+      <div class="label-row">
+        <label data-i18n="blur_label">ぼかし</label>
+        <button class="reset-slider-btn" id="imageBlurReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+      </div>
+      <input type="range" id="imageBlur" min="0" max="30" value="0">
+      <div class="label-row">
+        <label data-i18n="mosaic_label">モザイク</label>
+        <button class="reset-slider-btn" id="imageMosaicReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+      </div>
+      <input type="range" id="imageMosaic" min="0" max="60" value="0">
+      <div class="chip-row">
+        <button class="chip" id="radialLinesChip" data-i18n="radial_lines_chip">集中線</button>
+      </div>
+      <div class="sub-panel" id="radialLinesOptions" style="display:none">
+        <label data-i18n="radial_lines_color_label">線の色</label>
+        <input type="color" id="radialLinesColor" value="#000000">
+        <div class="label-row">
+          <label data-i18n="radial_lines_density_label">密度</label>
+          <button class="reset-slider-btn" id="radialLinesDensityReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+        </div>
+        <input type="range" id="radialLinesDensity" min="10" max="100" value="50">
+      </div>
+      <button class="ghost" id="imageEraserBtn" data-i18n="image_eraser_btn">消しゴムで消す（透明化）</button>
+      <div class="sub-panel" id="imageEraserOptions" style="display:none">
+        <label data-i18n="image_eraser_size_label">消しゴムの太さ</label>
+        <input type="range" id="imageEraserSize" min="4" max="150" value="30">
+        <div class="hint" data-i18n="image_eraser_hint">画像の上をドラッグすると、その部分が透明になります</div>
+        <button class="ghost small" id="imageEraserDoneBtn" data-i18n="image_eraser_done_btn">消しゴムを終了</button>
+      </div>
       <button class="ghost small" id="deleteImageBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
     </div>
     <div class="panel-box crop-controls" id="cropControls" style="display:none">
