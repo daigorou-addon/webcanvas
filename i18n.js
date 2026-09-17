@@ -24,7 +24,7 @@ ja: {
   shape_type_label: "図形の種類", shape_rect_label: "四角形", shape_ellipse_label: "楕円",
   shape_rounded_rect_label: "角丸四角形", shape_pill_label: "左右丸四角形", shape_triangle_label: "三角形",
   shape_diamond_label: "ひし形", shape_pentagon_label: "五角形", shape_hexagon_label: "六角形",
-  shape_star_label: "星", shape_heart_label: "ハート", shape_parallelogram_label: "平行四辺形", shape_arch_top_label: "上だけ丸い四角形", shape_arrow_label: "矢印", shape_arrow_double_label: "両方向矢印", shape_speech_bubble_label: "吹き出し",
+  shape_star_label: "星", shape_heart_label: "ハート", shape_parallelogram_label: "平行四辺形", shape_arch_top_label: "上だけ丸い四角形", shape_arrow_label: "矢印", shape_arrow_double_label: "両方向矢印", shape_speech_bubble_label: "吹き出し", shape_stamp_label: "切手",
   shape_fill_label: "塗りつぶし色", shape_fill_none_btn: "なし", shape_stroke_label: "枠線の色", shape_stroke_width_label: "枠線の太さ",
   shape_content_hint: "画像をこの図形の上にドラッグ＆ドロップすると図形の中だけに収まります。画像が入った図形をダブルクリックすると、画像の位置・拡大率を調整できます",
   shape_add_image_btn: "図形に画像を入れる", shape_clear_image_btn: "画像を外す",
@@ -43,7 +43,7 @@ ja: {
   fit_canvas_btn: "選択画像のサイズにする",
   layers_panel_title: "レイヤー",
   back_to_top: "← Daigorou-Tools",
-  local_badge: "local-only", footer_privacy_note: "すべての処理はこの端末内で行われます。ファイルはどこにも送信されません。",
+  local_badge: "local-only", footer_privacy_note: "すべての処理はこの端末内で行われます。ファイルはどこにも送信されません。", theme_toggle_title: "表示テーマを切り替え（ライト/ダーク）",
   ctx_bring_front: "最前面へ", ctx_forward: "前面へ", ctx_backward: "背面へ", ctx_send_back: "最背面へ", ctx_delete: "削除",
   opt_font_label: "フォント", font_gothic: "ゴシック", font_rounded: "丸ゴシック", font_mincho: "明朝", font_handwritten: "手書き風",
   font_group_gothic: "ゴシック", font_group_rounded: "丸ゴシック", font_group_mincho: "明朝",
@@ -60,11 +60,11 @@ ja: {
   opt_arc_strength_label: "カーブの強さ",
   outline_chip: "袋文字", outline_color_label: "袋の色", outline_width_label: "袋の太さ",
   font_size_label: "文字サイズ", shadow_size_label: "影の大きさ", eyedropper_title: "スポイト", reset_btn_title: "標準値に戻す",
-  shadow_chip: "影文字", italic_chip: "斜体文字", opt_arc_label: "弧を描く",
+  shadow_chip: "影文字", neon_chip: "ネオン文字", neon_strength_label: "発光の強さ", neon_hint: "文字色がそのまま発光色になります", italic_chip: "斜体文字", opt_arc_label: "弧を描く",
   crop_btn: "画像を切り抜く", crop_apply_btn: "切り抜きを適用", crop_cancel_btn: "キャンセル",
   flip_x_btn: "左右反転", flip_y_btn: "上下反転", opacity_label: "不透明度",
   brightness_label: "明るさ", contrast_label: "コントラスト", blur_label: "ぼかし", mosaic_label: "モザイク",
-  radial_lines_chip: "集中線", radial_lines_color_label: "線の色", radial_lines_density_label: "密度",
+  radial_lines_chip: "集中線", radial_lines_color_label: "線の色", radial_lines_density_label: "密度", radial_lines_length_label: "線の長さ",
   image_eraser_btn: "消しゴムで消す（透明化）", image_eraser_size_label: "消しゴムの太さ",
   image_eraser_hint: "画像の上をドラッグすると、その部分が透明になります", image_eraser_done_btn: "消しゴムを終了",
   layer_image_label: "画像", layer_text_label: "テキスト", layer_empty_text: "(空)",
@@ -89,7 +89,7 @@ en: {
   shape_type_label: "Shape type", shape_rect_label: "Rectangle", shape_ellipse_label: "Ellipse",
   shape_rounded_rect_label: "Rounded rectangle", shape_pill_label: "Pill (rounded sides)", shape_triangle_label: "Triangle",
   shape_diamond_label: "Diamond", shape_pentagon_label: "Pentagon", shape_hexagon_label: "Hexagon",
-  shape_star_label: "Star", shape_heart_label: "Heart", shape_parallelogram_label: "Parallelogram", shape_arch_top_label: "Arch top (rounded top)", shape_arrow_label: "Arrow", shape_arrow_double_label: "Double-headed arrow", shape_speech_bubble_label: "Speech bubble",
+  shape_star_label: "Star", shape_heart_label: "Heart", shape_parallelogram_label: "Parallelogram", shape_arch_top_label: "Arch top (rounded top)", shape_arrow_label: "Arrow", shape_arrow_double_label: "Double-headed arrow", shape_speech_bubble_label: "Speech bubble", shape_stamp_label: "Postage stamp",
   shape_fill_label: "Fill color", shape_fill_none_btn: "None", shape_stroke_label: "Border color", shape_stroke_width_label: "Border thickness",
   shape_content_hint: "Drop an image onto a shape to fit it inside that shape only. Double-click a shape that has an image to adjust its position and zoom",
   shape_add_image_btn: "Put image in shape", shape_clear_image_btn: "Remove image",
@@ -108,7 +108,7 @@ en: {
   fit_canvas_btn: "Fit canvas to image",
   layers_panel_title: "Layers",
   back_to_top: "← Daigorou-Tools",
-  local_badge: "local-only", footer_privacy_note: "All processing happens on this device. Files are never uploaded anywhere.",
+  local_badge: "local-only", footer_privacy_note: "All processing happens on this device. Files are never uploaded anywhere.", theme_toggle_title: "Switch theme (light/dark)",
   ctx_bring_front: "Bring to front", ctx_forward: "Bring forward", ctx_backward: "Send backward", ctx_send_back: "Send to back", ctx_delete: "Delete",
   opt_font_label: "Font", font_gothic: "Gothic", font_rounded: "Rounded", font_mincho: "Mincho", font_handwritten: "Handwritten",
   font_group_gothic: "Gothic", font_group_rounded: "Rounded", font_group_mincho: "Mincho",
@@ -125,11 +125,11 @@ en: {
   opt_arc_strength_label: "Curve strength",
   outline_chip: "Outline", outline_color_label: "Outline color", outline_width_label: "Outline thickness",
   font_size_label: "Font size", shadow_size_label: "Shadow size", eyedropper_title: "Eyedropper", reset_btn_title: "Reset to default",
-  shadow_chip: "Shadow", italic_chip: "Italic", opt_arc_label: "Curve",
+  shadow_chip: "Shadow", neon_chip: "Neon", neon_strength_label: "Glow strength", neon_hint: "The glow uses the text's own color", italic_chip: "Italic", opt_arc_label: "Curve",
   crop_btn: "Crop image", crop_apply_btn: "Apply crop", crop_cancel_btn: "Cancel",
   flip_x_btn: "Flip horizontal", flip_y_btn: "Flip vertical", opacity_label: "Opacity",
   brightness_label: "Brightness", contrast_label: "Contrast", blur_label: "Blur", mosaic_label: "Mosaic",
-  radial_lines_chip: "Speed lines", radial_lines_color_label: "Line color", radial_lines_density_label: "Density",
+  radial_lines_chip: "Speed lines", radial_lines_color_label: "Line color", radial_lines_density_label: "Density", radial_lines_length_label: "Line length",
   image_eraser_btn: "Erase (make transparent)", image_eraser_size_label: "Eraser size",
   image_eraser_hint: "Drag over the image to make that part transparent", image_eraser_done_btn: "Finish erasing",
   layer_image_label: "Image", layer_text_label: "Text", layer_empty_text: "(empty)",
@@ -154,7 +154,7 @@ ko: {
   shape_type_label: "도형 종류", shape_rect_label: "사각형", shape_ellipse_label: "타원",
   shape_rounded_rect_label: "둥근 모서리 사각형", shape_pill_label: "좌우 둥근 사각형", shape_triangle_label: "삼각형",
   shape_diamond_label: "마름모", shape_pentagon_label: "오각형", shape_hexagon_label: "육각형",
-  shape_star_label: "별", shape_heart_label: "하트", shape_parallelogram_label: "평행사변형", shape_arch_top_label: "위만 둥근 사각형", shape_arrow_label: "화살표", shape_arrow_double_label: "양방향 화살표", shape_speech_bubble_label: "말풍선",
+  shape_star_label: "별", shape_heart_label: "하트", shape_parallelogram_label: "평행사변형", shape_arch_top_label: "위만 둥근 사각형", shape_arrow_label: "화살표", shape_arrow_double_label: "양방향 화살표", shape_speech_bubble_label: "말풍선", shape_stamp_label: "우표",
   shape_fill_label: "채우기 색상", shape_fill_none_btn: "없음", shape_stroke_label: "테두리 색상", shape_stroke_width_label: "테두리 굵기",
   shape_content_hint: "이미지를 이 도형 위로 드래그 앤 드롭하면 도형 안에만 맞춰집니다. 이미지가 들어간 도형을 더블클릭하면 위치와 확대율을 조정할 수 있습니다",
   shape_add_image_btn: "도형에 이미지 넣기", shape_clear_image_btn: "이미지 제거",
@@ -173,7 +173,7 @@ ko: {
   fit_canvas_btn: "선택한 이미지 크기로 맞추기",
   layers_panel_title: "레이어",
   back_to_top: "← Daigorou-Tools",
-  local_badge: "local-only", footer_privacy_note: "모든 처리는 이 기기 안에서 이루어집니다. 파일은 어디로도 전송되지 않습니다.",
+  local_badge: "local-only", footer_privacy_note: "모든 처리는 이 기기 안에서 이루어집니다. 파일은 어디로도 전송되지 않습니다.", theme_toggle_title: "테마 전환(라이트/다크)",
   ctx_bring_front: "맨 앞으로", ctx_forward: "앞으로", ctx_backward: "뒤로", ctx_send_back: "맨 뒤로", ctx_delete: "삭제",
   opt_font_label: "폰트", font_gothic: "고딕체", font_rounded: "둥근 고딕체", font_mincho: "명조체", font_handwritten: "손글씨체",
   font_group_gothic: "고딕체", font_group_rounded: "둥근 고딕체", font_group_mincho: "명조체",
@@ -190,11 +190,11 @@ ko: {
   opt_arc_strength_label: "곡선 강도",
   outline_chip: "테두리 문자", outline_color_label: "테두리 색", outline_width_label: "테두리 두께",
   font_size_label: "글자 크기", shadow_size_label: "그림자 크기", eyedropper_title: "스포이드", reset_btn_title: "기본값으로 재설정",
-  shadow_chip: "그림자 문자", italic_chip: "기울임 문자", opt_arc_label: "곡선으로 배치",
+  shadow_chip: "그림자 문자", neon_chip: "네온 문자", neon_strength_label: "발광 강도", neon_hint: "글자 색이 그대로 발광 색이 됩니다", italic_chip: "기울임 문자", opt_arc_label: "곡선으로 배치",
   crop_btn: "이미지 자르기", crop_apply_btn: "자르기 적용", crop_cancel_btn: "취소",
   flip_x_btn: "좌우 반전", flip_y_btn: "상하 반전", opacity_label: "불투명도",
   brightness_label: "밝기", contrast_label: "대비", blur_label: "흐림 효과", mosaic_label: "모자이크",
-  radial_lines_chip: "집중선", radial_lines_color_label: "선 색상", radial_lines_density_label: "밀도",
+  radial_lines_chip: "집중선", radial_lines_color_label: "선 색상", radial_lines_density_label: "밀도", radial_lines_length_label: "선 길이",
   image_eraser_btn: "지우개로 지우기(투명화)", image_eraser_size_label: "지우개 굵기",
   image_eraser_hint: "이미지를 드래그하면 그 부분이 투명해집니다", image_eraser_done_btn: "지우개 종료",
   layer_image_label: "이미지", layer_text_label: "텍스트", layer_empty_text: "(비어 있음)",
@@ -219,7 +219,7 @@ ko: {
   shape_type_label: "图形类型", shape_rect_label: "矩形", shape_ellipse_label: "椭圆",
   shape_rounded_rect_label: "圆角矩形", shape_pill_label: "左右圆角矩形", shape_triangle_label: "三角形",
   shape_diamond_label: "菱形", shape_pentagon_label: "五边形", shape_hexagon_label: "六边形",
-  shape_star_label: "星形", shape_heart_label: "心形", shape_parallelogram_label: "平行四边形", shape_arch_top_label: "仅顶部圆角矩形", shape_arrow_label: "箭头", shape_arrow_double_label: "双向箭头", shape_speech_bubble_label: "对话气泡",
+  shape_star_label: "星形", shape_heart_label: "心形", shape_parallelogram_label: "平行四边形", shape_arch_top_label: "仅顶部圆角矩形", shape_arrow_label: "箭头", shape_arrow_double_label: "双向箭头", shape_speech_bubble_label: "对话气泡", shape_stamp_label: "邮票",
   shape_fill_label: "填充颜色", shape_fill_none_btn: "无", shape_stroke_label: "边框颜色", shape_stroke_width_label: "边框粗细",
   shape_content_hint: "将图片拖放到此图形上，图片会只填充在该图形范围内。双击已有图片的图形可以调整图片的位置和缩放",
   shape_add_image_btn: "在图形中放入图片", shape_clear_image_btn: "移除图片",
@@ -238,7 +238,7 @@ ko: {
   fit_canvas_btn: "适应所选图片尺寸",
   layers_panel_title: "图层",
   back_to_top: "← Daigorou-Tools",
-  local_badge: "local-only", footer_privacy_note: "所有处理均在本设备内完成，文件不会上传到任何地方。",
+  local_badge: "local-only", footer_privacy_note: "所有处理均在本设备内完成，文件不会上传到任何地方。", theme_toggle_title: "切换主题（浅色/深色）",
   ctx_bring_front: "置于顶层", ctx_forward: "上移一层", ctx_backward: "下移一层", ctx_send_back: "置于底层", ctx_delete: "删除",
   opt_font_label: "字体", font_gothic: "黑体", font_rounded: "圆黑体", font_mincho: "明朝体", font_handwritten: "手写体",
   font_group_gothic: "黑体", font_group_rounded: "圆黑体", font_group_mincho: "明朝体",
@@ -255,11 +255,11 @@ ko: {
   opt_arc_strength_label: "弧度强弱",
   outline_chip: "描边文字", outline_color_label: "描边颜色", outline_width_label: "描边粗细",
   font_size_label: "字体大小", shadow_size_label: "阴影大小", eyedropper_title: "吸管", reset_btn_title: "恢复默认值",
-  shadow_chip: "阴影文字", italic_chip: "斜体文字", opt_arc_label: "弧形排列",
+  shadow_chip: "阴影文字", neon_chip: "霓虹文字", neon_strength_label: "发光强度", neon_hint: "文字颜色即为发光颜色", italic_chip: "斜体文字", opt_arc_label: "弧形排列",
   crop_btn: "裁剪图片", crop_apply_btn: "应用裁剪", crop_cancel_btn: "取消",
   flip_x_btn: "左右翻转", flip_y_btn: "上下翻转", opacity_label: "不透明度",
   brightness_label: "亮度", contrast_label: "对比度", blur_label: "模糊", mosaic_label: "马赛克",
-  radial_lines_chip: "集中线", radial_lines_color_label: "线条颜色", radial_lines_density_label: "密度",
+  radial_lines_chip: "集中线", radial_lines_color_label: "线条颜色", radial_lines_density_label: "密度", radial_lines_length_label: "线条长度",
   image_eraser_btn: "橡皮擦（透明化）", image_eraser_size_label: "橡皮擦粗细",
   image_eraser_hint: "在图片上拖动即可让该部分变透明", image_eraser_done_btn: "结束橡皮擦",
   layer_image_label: "图片", layer_text_label: "文字", layer_empty_text: "(空)",
@@ -284,7 +284,7 @@ ko: {
   shape_type_label: "圖形種類", shape_rect_label: "矩形", shape_ellipse_label: "橢圓",
   shape_rounded_rect_label: "圓角矩形", shape_pill_label: "左右圓角矩形", shape_triangle_label: "三角形",
   shape_diamond_label: "菱形", shape_pentagon_label: "五邊形", shape_hexagon_label: "六邊形",
-  shape_star_label: "星形", shape_heart_label: "愛心", shape_parallelogram_label: "平行四邊形", shape_arch_top_label: "僅頂部圓角矩形", shape_arrow_label: "箭頭", shape_arrow_double_label: "雙向箭頭", shape_speech_bubble_label: "對話氣泡",
+  shape_star_label: "星形", shape_heart_label: "愛心", shape_parallelogram_label: "平行四邊形", shape_arch_top_label: "僅頂部圓角矩形", shape_arrow_label: "箭頭", shape_arrow_double_label: "雙向箭頭", shape_speech_bubble_label: "對話氣泡", shape_stamp_label: "郵票",
   shape_fill_label: "填滿顏色", shape_fill_none_btn: "無", shape_stroke_label: "邊框顏色", shape_stroke_width_label: "邊框粗細",
   shape_content_hint: "將圖片拖放到這個圖形上，圖片會只填滿在該圖形範圍內。雙擊已有圖片的圖形可以調整圖片的位置和縮放",
   shape_add_image_btn: "在圖形中放入圖片", shape_clear_image_btn: "移除圖片",
@@ -303,7 +303,7 @@ ko: {
   fit_canvas_btn: "配合所選圖片尺寸",
   layers_panel_title: "圖層",
   back_to_top: "← Daigorou-Tools",
-  local_badge: "local-only", footer_privacy_note: "所有處理均在本裝置內完成，檔案不會上傳到任何地方。",
+  local_badge: "local-only", footer_privacy_note: "所有處理均在本裝置內完成，檔案不會上傳到任何地方。", theme_toggle_title: "切換主題（淺色/深色）",
   ctx_bring_front: "移到最上層", ctx_forward: "上移一層", ctx_backward: "下移一層", ctx_send_back: "移到最下層", ctx_delete: "刪除",
   opt_font_label: "字型", font_gothic: "黑體", font_rounded: "圓黑體", font_mincho: "明朝體", font_handwritten: "手寫體",
   font_group_gothic: "黑體", font_group_rounded: "圓黑體", font_group_mincho: "明朝體",
@@ -320,11 +320,11 @@ ko: {
   opt_arc_strength_label: "弧度強弱",
   outline_chip: "描邊文字", outline_color_label: "描邊顏色", outline_width_label: "描邊粗細",
   font_size_label: "字體大小", shadow_size_label: "陰影大小", eyedropper_title: "吸管", reset_btn_title: "恢復預設值",
-  shadow_chip: "陰影文字", italic_chip: "斜體文字", opt_arc_label: "弧形排列",
+  shadow_chip: "陰影文字", neon_chip: "霓虹文字", neon_strength_label: "發光強度", neon_hint: "文字顏色即為發光顏色", italic_chip: "斜體文字", opt_arc_label: "弧形排列",
   crop_btn: "裁切圖片", crop_apply_btn: "套用裁切", crop_cancel_btn: "取消",
   flip_x_btn: "左右翻轉", flip_y_btn: "上下翻轉", opacity_label: "不透明度",
   brightness_label: "亮度", contrast_label: "對比度", blur_label: "模糊", mosaic_label: "馬賽克",
-  radial_lines_chip: "集中線", radial_lines_color_label: "線條顏色", radial_lines_density_label: "密度",
+  radial_lines_chip: "集中線", radial_lines_color_label: "線條顏色", radial_lines_density_label: "密度", radial_lines_length_label: "線條長度",
   image_eraser_btn: "橡皮擦（透明化）", image_eraser_size_label: "橡皮擦粗細",
   image_eraser_hint: "在圖片上拖曳即可讓該部分變透明", image_eraser_done_btn: "結束橡皮擦",
   layer_image_label: "圖片", layer_text_label: "文字", layer_empty_text: "(空)",
@@ -349,7 +349,7 @@ es: {
   shape_type_label: "Tipo de forma", shape_rect_label: "Rectángulo", shape_ellipse_label: "Elipse",
   shape_rounded_rect_label: "Rectángulo redondeado", shape_pill_label: "Píldora (lados redondeados)", shape_triangle_label: "Triángulo",
   shape_diamond_label: "Rombo", shape_pentagon_label: "Pentágono", shape_hexagon_label: "Hexágono",
-  shape_star_label: "Estrella", shape_heart_label: "Corazón", shape_parallelogram_label: "Paralelogramo", shape_arch_top_label: "Arco superior (redondeado arriba)", shape_arrow_label: "Flecha", shape_arrow_double_label: "Flecha bidireccional", shape_speech_bubble_label: "Globo de dialogo",
+  shape_star_label: "Estrella", shape_heart_label: "Corazón", shape_parallelogram_label: "Paralelogramo", shape_arch_top_label: "Arco superior (redondeado arriba)", shape_arrow_label: "Flecha", shape_arrow_double_label: "Flecha bidireccional", shape_speech_bubble_label: "Globo de dialogo", shape_stamp_label: "Sello postal",
   shape_fill_label: "Color de relleno", shape_fill_none_btn: "Ninguno", shape_stroke_label: "Color del borde", shape_stroke_width_label: "Grosor del borde",
   shape_content_hint: "Suelta una imagen sobre esta forma para que encaje solo dentro de ella. Haz doble clic en una forma con imagen para ajustar su posicion y zoom",
   shape_add_image_btn: "Poner imagen en la forma", shape_clear_image_btn: "Quitar imagen",
@@ -368,7 +368,7 @@ es: {
   fit_canvas_btn: "Ajustar lienzo a la imagen",
   layers_panel_title: "Capas",
   back_to_top: "← Daigorou-Tools",
-  local_badge: "local-only", footer_privacy_note: "Todo el procesamiento ocurre en este dispositivo. Los archivos nunca se suben a ningún sitio.",
+  local_badge: "local-only", footer_privacy_note: "Todo el procesamiento ocurre en este dispositivo. Los archivos nunca se suben a ningún sitio.", theme_toggle_title: "Cambiar tema (claro/oscuro)",
   ctx_bring_front: "Traer al frente", ctx_forward: "Adelantar", ctx_backward: "Atrasar", ctx_send_back: "Enviar al fondo", ctx_delete: "Eliminar",
   opt_font_label: "Fuente", font_gothic: "Gótica", font_rounded: "Redondeada", font_mincho: "Mincho", font_handwritten: "Manuscrita",
   font_group_gothic: "Gótica", font_group_rounded: "Redondeada", font_group_mincho: "Mincho",
@@ -385,11 +385,11 @@ es: {
   opt_arc_strength_label: "Intensidad de curva",
   outline_chip: "Contorno", outline_color_label: "Color del contorno", outline_width_label: "Grosor del contorno",
   font_size_label: "Tamano de fuente", shadow_size_label: "Tamano de la sombra", eyedropper_title: "Cuentagotas", reset_btn_title: "Restablecer valor",
-  shadow_chip: "Sombra", italic_chip: "Cursiva", opt_arc_label: "Curvar",
+  shadow_chip: "Sombra", neon_chip: "Neon", neon_strength_label: "Intensidad del brillo", neon_hint: "El brillo usa el propio color del texto", italic_chip: "Cursiva", opt_arc_label: "Curvar",
   crop_btn: "Recortar imagen", crop_apply_btn: "Aplicar recorte", crop_cancel_btn: "Cancelar",
   flip_x_btn: "Voltear horizontal", flip_y_btn: "Voltear vertical", opacity_label: "Opacidad",
   brightness_label: "Brillo", contrast_label: "Contraste", blur_label: "Desenfoque", mosaic_label: "Mosaico",
-  radial_lines_chip: "Lineas de velocidad", radial_lines_color_label: "Color de linea", radial_lines_density_label: "Densidad",
+  radial_lines_chip: "Lineas de velocidad", radial_lines_color_label: "Color de linea", radial_lines_density_label: "Densidad", radial_lines_length_label: "Longitud de linea",
   image_eraser_btn: "Borrar (hacer transparente)", image_eraser_size_label: "Tamano del borrador",
   image_eraser_hint: "Arrastra sobre la imagen para hacer transparente esa parte", image_eraser_done_btn: "Terminar de borrar",
   layer_image_label: "Imagen", layer_text_label: "Texto", layer_empty_text: "(vacío)",
@@ -454,4 +454,27 @@ document.addEventListener('DOMContentLoaded', () => {
     sel.value = currentLang;
     sel.addEventListener('change', () => applyI18n(sel.value));
   }
+});
+
+// ---- 表示テーマ(ライト/ダーク) ----
+function detectTheme(){
+  const saved = localStorage.getItem('webcanvas-theme');
+  if(saved === 'light' || saved === 'dark') return saved;
+  return 'dark'; // デフォルトはダーク背景
+}
+let currentTheme = detectTheme();
+function applyTheme(theme){
+  currentTheme = (theme === 'dark') ? 'dark' : 'light';
+  localStorage.setItem('webcanvas-theme', currentTheme);
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  const btn = document.getElementById('themeToggleBtn');
+  if(btn){
+    btn.textContent = currentTheme === 'dark' ? '☾' : '☀';
+    btn.classList.toggle('is-dark', currentTheme === 'dark');
+  }
+}
+applyTheme(currentTheme);
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('themeToggleBtn');
+  if(btn) btn.addEventListener('click', () => applyTheme(currentTheme === 'dark' ? 'light' : 'dark'));
 });

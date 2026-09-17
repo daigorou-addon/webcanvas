@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WebCanvas</title>
 <link rel="icon" type="image/png" href="favicon.png">
+<script>
+  // CSSが読み込まれる前にテーマ属性を確定させ、切り替え時のチラつきを防ぐ
+  (function(){
+    try{
+      var t = localStorage.getItem('webcanvas-theme');
+      document.documentElement.setAttribute('data-theme', (t === 'light') ? 'light' : 'dark');
+    }catch(e){}
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;700;900&family=Zen+Maru+Gothic:wght@400;700;900&family=Kiwi+Maru:wght@400;500&family=Zen+Antique&family=Zen+Old+Mincho:wght@400;900&family=Noto+Serif+JP:wght@400;700;900&family=Shippori+Mincho:wght@400;700&family=Yusei+Magic&family=Yomogi&family=Klee+One:wght@400;600&family=Hachi+Maru+Pop&family=Dela+Gothic+One&family=Reggae+One&family=RocknRoll+One&family=Rampart+One&family=Train+One&family=DotGothic16&family=Potta+One&family=Stick&display=swap" rel="stylesheet">
@@ -27,6 +36,7 @@
       <button id="applyCustom" class="ghost" data-i18n="apply_custom_btn">適用</button>
     </div>
     <span class="canvas-dim" id="canvasDim">1280 × 720 px</span>
+    <button id="themeToggleBtn" class="theme-toggle" data-i18n-title="theme_toggle_title" title="表示テーマを切り替え">☀</button>
     <select id="langSelect" class="lang-select">
       <option value="ja">日本語</option>
       <option value="en">English</option>
@@ -125,6 +135,7 @@
       <div class="chip-row">
         <span class="chip" id="outlineChip" data-i18n="outline_chip">袋文字</span>
         <span class="chip" id="shadowChip" data-i18n="shadow_chip">影文字</span>
+        <span class="chip" id="neonChip" data-i18n="neon_chip">ネオン文字</span>
         <span class="chip" id="italicChip" data-i18n="italic_chip">斜め文字</span>
         <span class="chip" id="arcChip" data-i18n="opt_arc_label">弧を描く</span>
       </div>
@@ -143,6 +154,14 @@
           <button class="reset-slider-btn" id="shadowSizeReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
         </div>
         <input type="range" id="shadowSize" min="30" max="300" value="100">
+      </div>
+      <div class="sub-panel" id="neonOptions" style="display:none">
+        <div class="label-row">
+          <label data-i18n="neon_strength_label">発光の強さ</label>
+          <button class="reset-slider-btn" id="neonStrengthReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+        </div>
+        <input type="range" id="neonStrength" min="30" max="300" value="100">
+        <div class="hint" data-i18n="neon_hint">文字色がそのまま発光色になります</div>
       </div>
       <div class="sub-panel" id="arcOptions" style="display:none">
         <label data-i18n="opt_arc_strength_label">カーブの強さ</label>
@@ -194,6 +213,11 @@
           <button class="reset-slider-btn" id="radialLinesDensityReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
         </div>
         <input type="range" id="radialLinesDensity" min="10" max="100" value="50">
+        <div class="label-row">
+          <label data-i18n="radial_lines_length_label">線の長さ</label>
+          <button class="reset-slider-btn" id="radialLinesLengthReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+        </div>
+        <input type="range" id="radialLinesLength" min="10" max="95" value="88">
       </div>
       <button class="ghost" id="imageEraserBtn" data-i18n="image_eraser_btn">消しゴムで消す（透明化）</button>
       <div class="sub-panel" id="imageEraserOptions" style="display:none">
@@ -240,6 +264,7 @@
         <option value="arrow" data-i18n="shape_arrow_label">矢印</option>
         <option value="arrow-double" data-i18n="shape_arrow_double_label">両方向矢印</option>
         <option value="speech-bubble" data-i18n="shape_speech_bubble_label">吹き出し</option>
+        <option value="stamp" data-i18n="shape_stamp_label">切手</option>
       </select>
       <label data-i18n="shape_fill_label">塗りつぶし色</label>
       <div class="row-inline">

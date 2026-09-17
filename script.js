@@ -35,6 +35,9 @@
   const shadowChip = document.getElementById('shadowChip');
   const shadowOptionsEl = document.getElementById('shadowOptions');
   const shadowSizeInput = document.getElementById('shadowSize');
+  const neonChip = document.getElementById('neonChip');
+  const neonOptionsEl = document.getElementById('neonOptions');
+  const neonStrengthInput = document.getElementById('neonStrength');
   const italicChip = document.getElementById('italicChip');
   const arcRange = document.getElementById('arcRange');
   const cropBtn = document.getElementById('cropBtn');
@@ -49,6 +52,7 @@
   const radialLinesOptionsEl = document.getElementById('radialLinesOptions');
   const radialLinesColorInput = document.getElementById('radialLinesColor');
   const radialLinesDensityInput = document.getElementById('radialLinesDensity');
+  const radialLinesLengthInput = document.getElementById('radialLinesLength');
   const imageEraserBtn = document.getElementById('imageEraserBtn');
   const imageEraserOptionsEl = document.getElementById('imageEraserOptions');
   const imageEraserSizeInput = document.getElementById('imageEraserSize');
@@ -473,6 +477,7 @@
       radialLinesOptionsEl.style.display = sel.radialLines ? 'flex' : 'none';
       radialLinesColorInput.value = sel.radialLinesColor;
       radialLinesDensityInput.value = sel.radialLinesDensity;
+      radialLinesLengthInput.value = sel.radialLinesLength;
       imageEraserOptionsEl.style.display = sel.eraserActive ? 'flex' : 'none';
     }
     tableOptionsEl.style.display = showTable ? 'flex' : 'none';
@@ -509,6 +514,9 @@
       shadowChip.classList.toggle('on', sel.shadow);
       shadowOptionsEl.style.display = sel.shadow ? 'flex' : 'none';
       shadowSizeInput.value = Math.round((sel.shadowStrength || 1) * 100);
+      neonChip.classList.toggle('on', sel.neon);
+      neonOptionsEl.style.display = sel.neon ? 'flex' : 'none';
+      neonStrengthInput.value = Math.round((sel.neonStrength || 1) * 100);
       italicChip.classList.toggle('on', sel.italic);
       arcChip.classList.toggle('on', sel.arcEnabled);
       arcOptionsEl.style.display = sel.arcEnabled ? 'flex' : 'none';
@@ -1249,6 +1257,21 @@
     }
   }
 
+  // 影・ネオン発光は両方とも text-shadow で重ねて表現できるので、まとめて組み立てる
+  function buildTextShadowCss(item){
+    const parts = [];
+    if(item.shadow){
+      const s = item.shadowStrength || 1;
+      parts.push(`${item.fontSize*0.05*s}px ${item.fontSize*0.06*s}px ${item.fontSize*0.1*s}px rgba(0,0,0,.55)`);
+    }
+    if(item.neon){
+      const base = item.fontSize * (item.neonStrength || 1);
+      const c = item.color;
+      [0.06, 0.14, 0.26, 0.45].forEach(f => parts.push(`0 0 ${base*f}px ${c}`));
+    }
+    return parts.length ? parts.join(', ') : 'none';
+  }
+
   function refreshTextVisuals(item){
     item.editEl.style.fontFamily = `"${item.fontFamily}", "Hiragino Sans", sans-serif`;
     item.editEl.style.fontSize = item.fontSize + 'px';
@@ -1257,9 +1280,7 @@
     item.editEl.style.webkitTextStroke = item.outline
       ? `${Math.max(0.5, item.fontSize*item.outlineWidth/100)}px ${item.outlineColor}`
       : '0px transparent';
-    item.editEl.style.textShadow = item.shadow
-      ? `${item.fontSize*0.05*(item.shadowStrength||1)}px ${item.fontSize*0.06*(item.shadowStrength||1)}px ${item.fontSize*0.1*(item.shadowStrength||1)}px rgba(0,0,0,.55)`
-      : 'none';
+    item.editEl.style.textShadow = buildTextShadowCss(item);
     item.bgEl.style.background = item.bgColor || 'transparent';
     applyArcModeVisibility(item);
   }
@@ -1299,9 +1320,7 @@
       span.style.color = item.color;
       span.style.fontStyle = item.italic ? 'italic' : 'normal';
       span.style.webkitTextStroke = strokeW;
-      span.style.textShadow = item.shadow
-        ? `${item.fontSize*0.05*(item.shadowStrength||1)}px ${item.fontSize*0.06*(item.shadowStrength||1)}px ${item.fontSize*0.1*(item.shadowStrength||1)}px rgba(0,0,0,.55)`
-        : 'none';
+      span.style.textShadow = buildTextShadowCss(item);
       container.appendChild(span);
     });
   }
@@ -1395,6 +1414,22 @@
     refreshTextVisuals(item);
   });
   shadowSizeInput.addEventListener('change', () => pushHistory());
+  neonChip.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.neon = !item.neon;
+    neonChip.classList.toggle('on', item.neon);
+    neonOptionsEl.style.display = item.neon ? 'flex' : 'none';
+    refreshTextVisuals(item);
+    pushHistory();
+  });
+  neonStrengthInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.neonStrength = (parseInt(neonStrengthInput.value, 10) || 100) / 100;
+    refreshTextVisuals(item);
+  });
+  neonStrengthInput.addEventListener('change', () => pushHistory());
   italicChip.addEventListener('click', () => {
     const item = getItem(selectedId);
     if(!item || item.type !== 'text') return;
@@ -1665,13 +1700,22 @@
     refreshImageFilters(item);
   });
   radialLinesDensityInput.addEventListener('change', () => pushHistory());
+  radialLinesLengthInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'image') return;
+    item.radialLinesLength = parseInt(radialLinesLengthInput.value, 10) || 88;
+    refreshImageFilters(item);
+  });
+  radialLinesLengthInput.addEventListener('change', () => pushHistory());
   bindSliderReset(document.getElementById('imageOpacityReset'), imageOpacityInput, 100);
   bindSliderReset(document.getElementById('imageBrightnessReset'), imageBrightnessInput, 100);
   bindSliderReset(document.getElementById('imageContrastReset'), imageContrastInput, 100);
   bindSliderReset(document.getElementById('imageBlurReset'), imageBlurInput, 0);
   bindSliderReset(document.getElementById('imageMosaicReset'), imageMosaicInput, 0);
   bindSliderReset(document.getElementById('radialLinesDensityReset'), radialLinesDensityInput, 50);
+  bindSliderReset(document.getElementById('radialLinesLengthReset'), radialLinesLengthInput, 88);
   bindSliderReset(document.getElementById('shadowSizeReset'), shadowSizeInput, 100);
+  bindSliderReset(document.getElementById('neonStrengthReset'), neonStrengthInput, 100);
   bindSliderReset(document.getElementById('outlineWidthReset'), outlineWidthInput, 12);
 
   cropApplyBtn.addEventListener('click', () => {
@@ -1709,6 +1753,7 @@
       radialLines: !!opts.radialLines,
       radialLinesColor: opts.radialLinesColor || '#000000',
       radialLinesDensity: opts.radialLinesDensity != null ? opts.radialLinesDensity : 50,
+      radialLinesLength: opts.radialLinesLength != null ? opts.radialLinesLength : 88,
       eraserActive: false, cropping:false
     };
     applyImageFlip(item);
@@ -1741,10 +1786,11 @@
     const v = Math.sin(seed) * 43758.5453;
     return v - Math.floor(v);
   }
-  function drawRadialLinesOverlay(ctx, w, h, color, density){
+  function drawRadialLinesOverlay(ctx, w, h, color, density, length){
     const cx = w/2, cy = h/2;
     const maxR = Math.sqrt(cx*cx + cy*cy) * 1.05;
-    const innerR = maxR * 0.12;
+    const lengthFrac = (length != null ? length : 88) / 100;
+    const innerR = maxR * (1 - lengthFrac);
     const count = Math.round(20 + (density/100) * 140);
     ctx.save();
     ctx.strokeStyle = color || '#000000';
@@ -1789,7 +1835,7 @@
       ctx.drawImage(small, 0, 0, smallW, smallH, 0, 0, nw, nh);
     }
     if(item.radialLines){
-      drawRadialLinesOverlay(ctx, nw, nh, item.radialLinesColor, item.radialLinesDensity);
+      drawRadialLinesOverlay(ctx, nw, nh, item.radialLinesColor, item.radialLinesDensity, item.radialLinesLength);
     }
     return cv;
   }
@@ -1880,10 +1926,11 @@
       id, type:'text', x, y, w, h, rotation, el, contentEl: content, handlesEl,
       editEl, bgEl, arcPreviewEl, text, fontSize,
       fontFamily: opts.fontFamily || 'Zen Kaku Gothic New',
-      color: opts.color || '#ffffff',
+      color: opts.color || '#9acd32',
       bgColor: opts.bgColor != null ? opts.bgColor : null,
       outline: !!opts.outline, outlineColor: opts.outlineColor || '#000000', outlineWidth: opts.outlineWidth || 12,
-      shadow: !!opts.shadow, shadowStrength: opts.shadowStrength || 1, italic: !!opts.italic,
+      shadow: !!opts.shadow, shadowStrength: opts.shadowStrength || 1,
+      neon: !!opts.neon, neonStrength: opts.neonStrength || 1, italic: !!opts.italic,
       arc: opts.arc || 0, arcEnabled: !!opts.arcEnabled,
       editing: false, cropping:false
     };
@@ -2233,7 +2280,7 @@
       ['Z']
     ];
   }
-  const ADVANCED_SHAPE_TYPES = ['triangle','diamond','pentagon','hexagon','star','heart','parallelogram','rounded-rect','pill','arch-top','arrow','arrow-double','speech-bubble'];
+  const ADVANCED_SHAPE_TYPES = ['triangle','diamond','pentagon','hexagon','star','heart','parallelogram','rounded-rect','pill','arch-top','arrow','arrow-double','speech-bubble','stamp'];
   // w,h,sw を受け取り、そのシェイプのパスコマンド列(絶対座標 0..w, 0..h)を返す。
   // rect/ellipse はそれぞれ専用の描画をするのでnullを返す。
   function shapeCommands(shapeType, w, h, sw){
@@ -2323,6 +2370,46 @@
           ['Z']
         ];
       }
+      case 'stamp': {
+        // 切手風：各辺に半円の切り込みが並んだ形
+        const bw2 = x1-x0, bh2 = y1-y0;
+        const r = Math.min(bw2, bh2) * 0.045;
+        const k = 0.5522847498 * r;
+        const countX = Math.max(3, Math.round(bw2 / (r*4)));
+        const countY = Math.max(2, Math.round(bh2 / (r*4)));
+        const segW = bw2/countX, segH = bh2/countY;
+        const cmds = [['M', x0, y0]];
+        for(let i = 0; i < countX; i++){
+          const midX = x0 + segW*(i+0.5);
+          cmds.push(['L', midX-r, y0]);
+          cmds.push(['C', midX-r, y0+k, midX-k, y0+r, midX, y0+r]);
+          cmds.push(['C', midX+k, y0+r, midX+r, y0+k, midX+r, y0]);
+        }
+        cmds.push(['L', x1, y0]);
+        for(let i = 0; i < countY; i++){
+          const midY = y0 + segH*(i+0.5);
+          cmds.push(['L', x1, midY-r]);
+          cmds.push(['C', x1-k, midY-r, x1-r, midY-k, x1-r, midY]);
+          cmds.push(['C', x1-r, midY+k, x1-k, midY+r, x1, midY+r]);
+        }
+        cmds.push(['L', x1, y1]);
+        for(let i = 0; i < countX; i++){
+          const midX = x1 - segW*(i+0.5);
+          cmds.push(['L', midX+r, y1]);
+          cmds.push(['C', midX+r, y1-k, midX+k, y1-r, midX, y1-r]);
+          cmds.push(['C', midX-k, y1-r, midX-r, y1-k, midX-r, y1]);
+        }
+        cmds.push(['L', x0, y1]);
+        for(let i = 0; i < countY; i++){
+          const midY = y1 - segH*(i+0.5);
+          cmds.push(['L', x0, midY+r]);
+          cmds.push(['C', x0+k, midY+r, x0+r, midY+k, x0+r, midY]);
+          cmds.push(['C', x0+r, midY-k, x0+k, midY-r, x0, midY-r]);
+        }
+        cmds.push(['L', x0, y0]);
+        cmds.push(['Z']);
+        return cmds;
+      }
       default: return null;
     }
   }
@@ -2348,24 +2435,45 @@
       pill:'shape_pill_label', triangle:'shape_triangle_label', diamond:'shape_diamond_label',
       pentagon:'shape_pentagon_label', hexagon:'shape_hexagon_label', star:'shape_star_label',
       heart:'shape_heart_label', parallelogram:'shape_parallelogram_label', 'arch-top':'shape_arch_top_label',
-      arrow:'shape_arrow_label', 'arrow-double':'shape_arrow_double_label', 'speech-bubble':'shape_speech_bubble_label'
+      arrow:'shape_arrow_label', 'arrow-double':'shape_arrow_double_label', 'speech-bubble':'shape_speech_bubble_label',
+      stamp:'shape_stamp_label'
     };
     return t(map[shapeType] || 'shape_rect_label');
   }
 
   // 図形に入れた画像の表示位置・サイズを計算する（中央基準のcoverフィット + 手動オフセット/拡大率）。
   // オフセットは常にこの関数内でクランプするので、保存値自体は多少はみ出していても表示は破綻しない。
-  function shapeImagePlacement(item){
-    const scale = Math.max(1, item.fillImageScale || 1);
+  // 図形に入れた画像の「基準サイズ」を、その時点のitem.w/hに対するcover(全面を覆う)サイズとして固定する。
+  // これを図形のリサイズでは変えないことで、リサイズのたびに画像の拡大率が変わって伸び縮みして見える
+  // (実際には歪んではいないが、ズーム量が変わるせいでそう見える)問題を避ける。
+  function computeShapeFillImageBase(item){
     const ir = item.fillImage.naturalWidth / item.fillImage.naturalHeight;
     const br = item.w / item.h;
-    let dw, dh;
-    if(ir > br){ dh = item.h*scale; dw = dh*ir; } else { dw = item.w*scale; dh = dw/ir; }
+    if(ir > br){ item.fillImageBaseH = item.h; item.fillImageBaseW = item.h*ir; }
+    else { item.fillImageBaseW = item.w; item.fillImageBaseH = item.w/ir; }
+  }
+  function shapeImagePlacement(item){
+    if(!item.fillImageBaseW || !item.fillImageBaseH) computeShapeFillImageBase(item);
+    const scale = Math.max(1, item.fillImageScale || 1);
+    let dw = item.fillImageBaseW * scale, dh = item.fillImageBaseH * scale;
+    // 図形が画像の基準サイズより大きく広げられた場合だけ、隙間が出ないよう最小限拡大する
+    if(dw < item.w || dh < item.h){
+      const growRatio = Math.max(item.w/dw, item.h/dh);
+      dw *= growRatio; dh *= growRatio;
+    }
     const maxOffX = Math.max(0, (dw - item.w)/2);
     const maxOffY = Math.max(0, (dh - item.h)/2);
     const offX = Math.max(-maxOffX, Math.min(maxOffX, item.fillImageOffsetX || 0));
     const offY = Math.max(-maxOffY, Math.min(maxOffY, item.fillImageOffsetY || 0));
     return { dw, dh, x: (item.w-dw)/2+offX, y: (item.h-dh)/2+offY, maxOffX, maxOffY };
+  }
+  // 切手の外周(ギザギザ)の内側に入れる、印刷枠っぽい細い内枠
+  function stampInnerFrameRect(item){
+    const sw = item.strokeWidth, inset = sw/2;
+    const x0 = inset, y0 = inset, x1 = item.w-inset, y1 = item.h-inset;
+    const r = Math.min(x1-x0, y1-y0) * 0.045;
+    const frameInset = r * 2.4;
+    return { x: x0+frameInset, y: y0+frameInset, w: Math.max(0,(x1-x0)-frameInset*2), h: Math.max(0,(y1-y0)-frameInset*2) };
   }
   function renderShapeSVG(item){
     const sw = item.strokeWidth;
@@ -2397,10 +2505,15 @@
       const p = shapeImagePlacement(item);
       imageTag = `<image href="${item.fillImage.src}" x="${p.x}" y="${p.y}" width="${p.dw}" height="${p.dh}" clip-path="url(#${clipId})"/>`;
     }
+    let innerFrameTag = '';
+    if(item.shapeType === 'stamp'){
+      const f = stampInnerFrameRect(item);
+      innerFrameTag = `<rect x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}" fill="none" stroke="${item.strokeColor}" stroke-width="${Math.max(1, sw*0.4)}"/>`;
+    }
     const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
     svg.setAttribute('viewBox', `0 0 ${item.w} ${item.h}`);
     svg.setAttribute('preserveAspectRatio', 'none');
-    svg.innerHTML = clipDefs + imageTag + shapeTag;
+    svg.innerHTML = clipDefs + imageTag + shapeTag + innerFrameTag;
     if(item.svgEl) item.svgEl.remove();
     item.svgEl = svg;
     item.contentEl.insertBefore(svg, item.contentEl.firstChild);
@@ -2428,9 +2541,12 @@
       fillImageOffsetX: opts.fillImageOffsetX || 0,
       fillImageOffsetY: opts.fillImageOffsetY || 0,
       fillImageScale: opts.fillImageScale || 1,
+      fillImageBaseW: opts.fillImageBaseW || null,
+      fillImageBaseH: opts.fillImageBaseH || null,
       imageAdjusting: false,
       cropping:false
     };
+    if(item.fillImage && !item.fillImageBaseW) computeShapeFillImageBase(item);
     renderShapeSVG(item);
     buildShapeImageAdjustHint(item);
     items.push(item);
@@ -2484,6 +2600,7 @@
         item.fillImageOffsetX = 0;
         item.fillImageOffsetY = 0;
         item.fillImageScale = 1;
+        computeShapeFillImageBase(item); // 今の図形サイズを基準に、新しい画像の基準サイズを決め直す
         renderShapeSVG(item);
         if(selectedId === item.id) selectItem(item.id);
         pushHistory();
@@ -2494,6 +2611,8 @@
   }
   function clearShapeFillImage(item){
     item.fillImage = null;
+    item.fillImageBaseW = null;
+    item.fillImageBaseH = null;
     renderShapeSVG(item);
     pushHistory();
   }
@@ -2707,7 +2826,52 @@
       traceShapePath(ctx, item, 0, 0);
       ctx.strokeStyle = item.strokeColor; ctx.lineWidth = item.strokeWidth; ctx.stroke();
     }
+    if(item.shapeType === 'stamp'){
+      const f = stampInnerFrameRect(item);
+      ctx.strokeStyle = item.strokeColor;
+      ctx.lineWidth = Math.max(1, item.strokeWidth*0.4);
+      ctx.strokeRect(-item.w/2+f.x, -item.h/2+f.y, f.w, f.h);
+    }
     ctx.restore();
+  }
+
+  // 影・袋文字・ネオン発光・本体の描画順序を1箇所にまとめる（弧文字と通常文字の両方で使う）
+  function drawTextGlyphWithEffects(ctx, item, text, x, y){
+    if(item.shadow){
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.55)';
+      ctx.shadowBlur = item.fontSize*0.1*(item.shadowStrength||1);
+      ctx.shadowOffsetX = item.fontSize*0.05*(item.shadowStrength||1);
+      ctx.shadowOffsetY = item.fontSize*0.06*(item.shadowStrength||1);
+      if(item.outline){
+        ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
+        ctx.strokeStyle = item.outlineColor;
+        ctx.strokeText(text, x, y);
+      } else {
+        ctx.fillStyle = item.color;
+        ctx.fillText(text, x, y);
+      }
+      ctx.restore(); // シャドウ設定を解除してから、くっきりした本体を重ね描きする
+    }
+    if(item.neon){
+      // ぼかし半径を段階的に変えながら同じ文字を重ね描きし、発光しているように見せる
+      ctx.save();
+      ctx.shadowColor = item.color;
+      ctx.fillStyle = item.color;
+      const base = item.fontSize * (item.neonStrength||1);
+      [0.45, 0.26, 0.14, 0.06].forEach(f => {
+        ctx.shadowBlur = base*f;
+        ctx.fillText(text, x, y);
+      });
+      ctx.restore();
+    }
+    if(item.outline){
+      ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
+      ctx.strokeStyle = item.outlineColor;
+      ctx.strokeText(text, x, y);
+    }
+    ctx.fillStyle = item.color;
+    ctx.fillText(text, x, y);
   }
 
   function drawArcTextInner(ctx, item){
@@ -2724,29 +2888,7 @@
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(angle*direction);
-      if(item.shadow){
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,.55)';
-        ctx.shadowBlur = item.fontSize*0.1*(item.shadowStrength||1);
-        ctx.shadowOffsetX = item.fontSize*0.05*(item.shadowStrength||1);
-        ctx.shadowOffsetY = item.fontSize*0.06*(item.shadowStrength||1);
-        if(item.outline){
-          ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
-          ctx.strokeStyle = item.outlineColor;
-          ctx.strokeText(ch, 0, 0);
-        } else {
-          ctx.fillStyle = item.color;
-          ctx.fillText(ch, 0, 0);
-        }
-        ctx.restore(); // シャドウ設定を解除してから、くっきりした本体を重ね描きする
-      }
-      if(item.outline){
-        ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
-        ctx.strokeStyle = item.outlineColor;
-        ctx.strokeText(ch, 0, 0);
-      }
-      ctx.fillStyle = item.color;
-      ctx.fillText(ch, 0, 0);
+      drawTextGlyphWithEffects(ctx, item, ch, 0, 0);
       ctx.restore();
     });
   }
@@ -2773,29 +2915,7 @@
     const totalHeight = lines.length * lineHeight;
     let y = -totalHeight/2 + lineHeight/2;
     for(const line of lines){
-      if(item.shadow){
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,.55)';
-        ctx.shadowBlur = item.fontSize*0.1*(item.shadowStrength||1);
-        ctx.shadowOffsetX = item.fontSize*0.05*(item.shadowStrength||1);
-        ctx.shadowOffsetY = item.fontSize*0.06*(item.shadowStrength||1);
-        if(item.outline){
-          ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
-          ctx.strokeStyle = item.outlineColor;
-          ctx.strokeText(line, 0, y);
-        } else {
-          ctx.fillStyle = item.color;
-          ctx.fillText(line, 0, y);
-        }
-        ctx.restore(); // シャドウ設定を解除してから、くっきりした本体を重ね描きする
-      }
-      if(item.outline){
-        ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
-        ctx.strokeStyle = item.outlineColor;
-        ctx.strokeText(line, 0, y);
-      }
-      ctx.fillStyle = item.color;
-      ctx.fillText(line, 0, y);
+      drawTextGlyphWithEffects(ctx, item, line, 0, y);
       y += lineHeight;
     }
     ctx.restore();
@@ -2899,7 +3019,7 @@
         if(it.type === 'image'){
           return { type:'image', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation, src: it.img.src, flipX: !!it.flipX, flipY: !!it.flipY, opacity: it.opacity != null ? it.opacity : 1,
             brightness: it.brightness, contrast: it.contrast, blurAmount: it.blurAmount, mosaicSize: it.mosaicSize,
-            radialLines: it.radialLines, radialLinesColor: it.radialLinesColor, radialLinesDensity: it.radialLinesDensity };
+            radialLines: it.radialLines, radialLinesColor: it.radialLinesColor, radialLinesDensity: it.radialLinesDensity, radialLinesLength: it.radialLinesLength };
         }
         if(it.type === 'table'){
           return {
@@ -2918,6 +3038,7 @@
             shapeType: it.shapeType, fillColor: it.fillColor, strokeColor: it.strokeColor, strokeWidth: it.strokeWidth,
             fillImageSrc: it.fillImage ? it.fillImage.src : null,
             fillImageOffsetX: it.fillImageOffsetX || 0, fillImageOffsetY: it.fillImageOffsetY || 0,
+            fillImageBaseW: it.fillImageBaseW || null, fillImageBaseH: it.fillImageBaseH || null,
             fillImageScale: it.fillImageScale || 1
           };
         }
@@ -2925,7 +3046,7 @@
           type:'text', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation,
           text: it.text, fontSize: it.fontSize, fontFamily: it.fontFamily, color: it.color, bgColor: it.bgColor,
           outline: it.outline, outlineColor: it.outlineColor, outlineWidth: it.outlineWidth,
-          shadow: it.shadow, shadowStrength: it.shadowStrength, italic: it.italic, arc: it.arc, arcEnabled: it.arcEnabled
+          shadow: it.shadow, shadowStrength: it.shadowStrength, neon: it.neon, neonStrength: it.neonStrength, italic: it.italic, arc: it.arc, arcEnabled: it.arcEnabled
         };
       })
     };
@@ -2981,7 +3102,7 @@
         createImageItem(loaded[i], data.x, data.y, data.w, data.h, {
           rotation:data.rotation, flipX:data.flipX, flipY:data.flipY, opacity:data.opacity,
           brightness:data.brightness, contrast:data.contrast, blurAmount:data.blurAmount, mosaicSize:data.mosaicSize,
-          radialLines:data.radialLines, radialLinesColor:data.radialLinesColor, radialLinesDensity:data.radialLinesDensity,
+          radialLines:data.radialLines, radialLinesColor:data.radialLinesColor, radialLinesDensity:data.radialLinesDensity, radialLinesLength:data.radialLinesLength,
           autoSelect:false, pushHist:false
         });
       } else if(data.type === 'table'){
@@ -2993,6 +3114,7 @@
           rotation:data.rotation, fillColor:data.fillColor, strokeColor:data.strokeColor, strokeWidth:data.strokeWidth,
           fillImage: loadedShapeFills[i],
           fillImageOffsetX: data.fillImageOffsetX, fillImageOffsetY: data.fillImageOffsetY, fillImageScale: data.fillImageScale,
+          fillImageBaseW: data.fillImageBaseW, fillImageBaseH: data.fillImageBaseH,
           autoSelect:false, pushHist:false
         });
       } else {

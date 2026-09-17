@@ -20,8 +20,50 @@
   --accent-2:#12a894;
   --accent-ink:#04241f;
   --danger:#e05a3a;
+  --checker-a:#1a2129;
+  --checker-b:#0d1116;
   --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
   --sans:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
+}
+
+/* ダークテーマ（デフォルト）。ライトにしたい場合は<html data-theme="light">に切り替える */
+:root, html[data-theme="light"]{
+  --dark:#ffffff;
+  --dark-2:#f3f5f6;
+  --panel:#ffffff;
+  --panel-2:#f1f3f4;
+  --raised:#e7eaec;
+  --paper:#12181f;
+  --ink:#222a33;
+  --ink-dim:#4c5866;
+  --muted:#828d99;
+  --line:#dbe0e3;
+  --line-soft:#e9ecee;
+  --accent:#0f9c8c;
+  --accent-2:#0c7c70;
+  --accent-ink:#ffffff;
+  --danger:#c8442a;
+  --checker-a:#e7eaec;
+  --checker-b:#ffffff;
+}
+html[data-theme="dark"]{
+  --dark:#0b0f13;
+  --dark-2:#0e1318;
+  --panel:#131920;
+  --panel-2:#171f27;
+  --raised:#1c242c;
+  --paper:#eef3f6;
+  --ink:#d7dee4;
+  --ink-dim:#b7c1c9;
+  --muted:#7c8894;
+  --line:#26303a;
+  --line-soft:#1c242c;
+  --accent:#29e0c4;
+  --accent-2:#12a894;
+  --accent-ink:#04241f;
+  --danger:#e05a3a;
+  --checker-a:#1a2129;
+  --checker-b:#0d1116;
 }
 
 *{box-sizing:border-box;}
@@ -120,6 +162,20 @@ select:focus, input[type=number]:focus{ outline:2px solid var(--accent); outline
   padding:6px 8px;
   margin-left:4px;
 }
+.theme-toggle{
+  width:30px; height:30px;
+  flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--panel-2);
+  color:var(--ink-dim);
+  font-size:15px;
+  line-height:1;
+  cursor:pointer;
+  padding:0;
+}
+.theme-toggle:hover{ border-color:var(--accent); color:var(--ink); }
 .custom-size{ display:none; align-items:center; gap:6px; }
 .custom-size.show{ display:flex; }
 .custom-size input[type=number]{ width:70px; }
@@ -424,11 +480,11 @@ main{
 .stage{
   position:relative;
   background:
-    linear-gradient(45deg,#1a2129 25%,transparent 25%),
-    linear-gradient(-45deg,#1a2129 25%,transparent 25%),
-    linear-gradient(45deg,transparent 75%,#1a2129 75%),
-    linear-gradient(-45deg,transparent 75%,#1a2129 75%);
-  background-color:#0d1116;
+    linear-gradient(45deg,var(--checker-a) 25%,transparent 25%),
+    linear-gradient(-45deg,var(--checker-a) 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,var(--checker-a) 75%),
+    linear-gradient(-45deg,transparent 75%,var(--checker-a) 75%);
+  background-color:var(--checker-b);
   background-size:20px 20px;
   background-position:0 0,0 10px,10px -10px,-10px 0;
   box-shadow:0 0 0 1px var(--line), 0 20px 50px rgba(0,0,0,.4);
