@@ -39,6 +39,19 @@
   const neonOptionsEl = document.getElementById('neonOptions');
   const neonStrengthInput = document.getElementById('neonStrength');
   const italicChip = document.getElementById('italicChip');
+  const textContentInput = document.getElementById('textContentInput');
+  const hollowChip = document.getElementById('hollowChip');
+  const gradientChip = document.getElementById('gradientChip');
+  const gradientOptionsEl = document.getElementById('gradientOptions');
+  const gradientBottomInput = document.getElementById('gradientBottomColor');
+  const outlineBorderChip = document.getElementById('outlineBorderChip');
+  const outlineBorderOptionsEl = document.getElementById('outlineBorderOptions');
+  const outlineBorderColorInput = document.getElementById('outlineBorderColor');
+  const outlineBorderWidthInput = document.getElementById('outlineBorderWidth');
+  const gradeRightChip = document.getElementById('gradeRightChip');
+  const gradeLeftChip = document.getElementById('gradeLeftChip');
+  const gradeOptionsEl = document.getElementById('gradeOptions');
+  const gradeStrengthInput = document.getElementById('gradeStrength');
   const arcRange = document.getElementById('arcRange');
   const cropBtn = document.getElementById('cropBtn');
   const flipXBtn = document.getElementById('flipXBtn');
@@ -139,7 +152,7 @@
     Object.values(groups).forEach(g => presetSelect.appendChild(g));
     presetSelect.value = prevValue && [...presetSelect.options].some(o => o.value === prevValue) ? prevValue : '';
   }
-  window.onWebCanvasLangChange = () => { renderPresetOptions(); renderLayerList(); };
+  window.onWebCanvasLangChange = () => { renderPresetOptions(); renderLayerList(); renderLogoTree(); };
   renderPresetOptions();
 
   // ---- キャンバスの状態 ----
@@ -501,6 +514,7 @@
     }
 
     if(showText){
+      if(document.activeElement !== textContentInput) textContentInput.value = sel.text || '';
       fontSelect.value = sel.fontFamily;
       textFontSizeInput.value = Math.round(sel.fontSize);
       textColorInput.value = sel.color;
@@ -511,6 +525,10 @@
       outlineOptionsEl.style.display = sel.outline ? 'flex' : 'none';
       outlineColorInput.value = sel.outlineColor;
       outlineWidthInput.value = sel.outlineWidth;
+      outlineBorderChip.classList.toggle('on', !!sel.outlineBorder);
+      outlineBorderOptionsEl.style.display = sel.outlineBorder ? 'flex' : 'none';
+      outlineBorderColorInput.value = sel.outlineBorderColor || '#ffffff';
+      outlineBorderWidthInput.value = sel.outlineBorderWidth || 8;
       shadowChip.classList.toggle('on', sel.shadow);
       shadowOptionsEl.style.display = sel.shadow ? 'flex' : 'none';
       shadowSizeInput.value = Math.round((sel.shadowStrength || 1) * 100);
@@ -521,6 +539,12 @@
       arcChip.classList.toggle('on', sel.arcEnabled);
       arcOptionsEl.style.display = sel.arcEnabled ? 'flex' : 'none';
       arcRange.value = sel.arc;
+      syncGradeUi(sel);
+      gradeStrengthInput.value = sel.gradeStrength || 50;
+      hollowChip.classList.toggle('on', !!sel.hollow);
+      gradientChip.classList.toggle('on', hasGradient(sel));
+      gradientOptionsEl.style.display = hasGradient(sel) ? 'flex' : 'none';
+      gradientBottomInput.value = hasGradient(sel) ? sel.gradient[sel.gradient.length-1] : '#ff3d81';
     }
     renderLayerList();
   }
@@ -826,6 +850,17 @@
         label.textContent = `${t('layer_text_label')}: ${preview}`;
       }
       row.appendChild(label);
+
+      const actions = document.createElement('div');
+      actions.className = 'layer-row-actions';
+      const delBtn = document.createElement('span');
+      delBtn.className = 'layer-row-icon-btn';
+      delBtn.title = t('layer_delete_title');
+      delBtn.textContent = '🗑';
+      delBtn.draggable = false;
+      delBtn.addEventListener('click', e => { e.stopPropagation(); deleteItem(it.id); });
+      actions.appendChild(delBtn);
+      row.appendChild(actions);
 
       row.draggable = true;
       row.dataset.id = it.id;
@@ -1236,6 +1271,9 @@
     item.editEl.contentEditable = 'true';
     item.editEl.style.display = 'flex';
     item.arcPreviewEl.style.display = 'none';
+    item.gradePreviewEl.style.display = 'none';
+    item.borderEl.style.display = hasOutlineBorder(item) ? 'flex' : 'none';
+    item.borderEl.innerHTML = item.editEl.innerHTML;
     item.editEl.focus();
     document.getSelection().selectAllChildren(item.editEl);
   }
@@ -1245,15 +1283,33 @@
     item.editEl.contentEditable = 'false';
     applyArcModeVisibility(item);
   }
+  function isGrade(item){ return item.gradeMode === 'right' || item.gradeMode === 'left'; }
+  function hasOutlineBorder(item){ return !!(item.outline && item.outlineBorder); }
+  // 中抜き：文字の中を塗らず、袋(線)だけを描く。線がないと何も見えないので、線があるときだけ有効
+  function isHollow(item){ return !!(item.hollow && item.outline); }
+  // グラデーション：上の色は「文字色」、下の色は gradient の最後。途中の色は見本スタイルが持つ
+  function hasGradient(item){ return Array.isArray(item.gradient) && item.gradient.length >= 2; }
+  function gradientStops(item){ return [item.color, ...item.gradient.slice(1)]; }
+  function isArcMode(item){ return !!(item.arcEnabled && item.arc !== 0); }
+  // これらのときは contenteditable の文字ではなく、1文字ずつ描くSVG(プレビュー)/canvas(書き出し)で表示する
+  function isSvgMode(item){ return isArcMode(item) || isGrade(item) || isHollow(item) || hasGradient(item); }
+  // 袋（内側の線）の太さ・縁取りリングの太さ。どちらも文字サイズに対する割合で決まる
+  function outlineStrokePx(item, size){ return Math.max(0.5, size*item.outlineWidth/100); }
+  function borderRingPx(item, size){ return size*(item.outlineBorderWidth || 8)/100; }
+  function outlineBorderStrokePx(item, size){ return outlineStrokePx(item, size) + 2*borderRingPx(item, size); }
+
   function applyArcModeVisibility(item){
     if(item.editing) return;
-    if(item.arcEnabled && item.arc !== 0){
+    item.arcPreviewEl.style.display = 'none';
+    if(isSvgMode(item)){
       item.editEl.style.display = 'none';
-      renderArcPreview(item);
-      item.arcPreviewEl.style.display = 'block';
+      item.borderEl.style.display = 'none';
+      renderGradePreview(item);
+      item.gradePreviewEl.style.display = 'block';
     } else {
       item.editEl.style.display = 'flex';
-      item.arcPreviewEl.style.display = 'none';
+      item.borderEl.style.display = hasOutlineBorder(item) ? 'flex' : 'none';
+      item.gradePreviewEl.style.display = 'none';
     }
   }
 
@@ -1273,14 +1329,31 @@
   }
 
   function refreshTextVisuals(item){
-    item.editEl.style.fontFamily = `"${item.fontFamily}", "Hiragino Sans", sans-serif`;
-    item.editEl.style.fontSize = item.fontSize + 'px';
-    item.editEl.style.color = item.color;
-    item.editEl.style.fontStyle = item.italic ? 'italic' : 'normal';
-    item.editEl.style.webkitTextStroke = item.outline
-      ? `${Math.max(0.5, item.fontSize*item.outlineWidth/100)}px ${item.outlineColor}`
+    const fam = `"${item.fontFamily}", "Hiragino Sans", sans-serif`;
+    const border = hasOutlineBorder(item);
+    const shadowCss = buildTextShadowCss(item);
+    const e = item.editEl;
+    e.style.fontFamily = fam;
+    e.style.fontSize = item.fontSize + 'px';
+    e.style.color = item.color;
+    e.style.fontStyle = item.italic ? 'italic' : 'normal';
+    e.style.webkitTextStroke = item.outline
+      ? `${outlineStrokePx(item, item.fontSize)}px ${item.outlineColor}`
       : '0px transparent';
-    item.editEl.style.textShadow = buildTextShadowCss(item);
+    // 縁取りがあるときは、影・発光は一番外側のレイヤー（縁取り）に付ける
+    e.style.textShadow = border ? 'none' : shadowCss;
+    const b = item.borderEl;
+    if(border){
+      b.style.fontFamily = fam;
+      b.style.fontSize = item.fontSize + 'px';
+      b.style.fontStyle = item.italic ? 'italic' : 'normal';
+      b.style.color = item.outlineBorderColor;
+      b.style.webkitTextStroke = `${outlineBorderStrokePx(item, item.fontSize)}px ${item.outlineBorderColor}`;
+      b.style.textShadow = shadowCss;
+      b.innerHTML = e.innerHTML;
+    } else {
+      b.innerHTML = '';
+    }
     item.bgEl.style.background = item.bgColor || 'transparent';
     applyArcModeVisibility(item);
   }
@@ -1297,32 +1370,181 @@
     return { chars, n, direction, absSpan, radius };
   }
 
-  function renderArcPreview(item){
-    const container = item.arcPreviewEl;
-    container.innerHTML = '';
-    const { chars, n, direction, absSpan, radius } = computeArcLayout(item.text || '', item.arc, item.fontSize);
-    if(n === 0) return;
-    const strokeW = item.outline
-      ? `${Math.max(0.5, item.fontSize*item.outlineWidth/100)}px ${item.outlineColor}`
-      : '0px transparent';
-    chars.forEach((ch, i) => {
+  // 弧の文字は円周上に並ぶので、そのままだと見た目の中心が枠の中心からずれる。
+  // 文字全体の縦方向の中央が枠の中央に来るよう、プレビューと書き出しの両方で同じ量だけ縦に補正する
+  function arcYOffset(layout){
+    const { n, direction, absSpan, radius } = layout;
+    if(!n || absSpan <= 0.001) return 0;
+    let mn = Infinity, mx = -Infinity;
+    for(let i = 0; i < n; i++){
       const tt = n === 1 ? 0 : (i/(n-1) - 0.5);
-      const angle = tt * absSpan * direction;
-      const x = radius * Math.sin(angle);
-      const y = direction > 0 ? -radius*Math.cos(angle) : radius*Math.cos(angle) - radius;
-      const span = document.createElement('span');
-      span.textContent = ch;
-      span.style.left = '50%';
-      span.style.top = '50%';
-      span.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${angle*direction}rad)`;
-      span.style.fontSize = item.fontSize + 'px';
-      span.style.fontFamily = `"${item.fontFamily}", "Hiragino Sans", sans-serif`;
-      span.style.color = item.color;
-      span.style.fontStyle = item.italic ? 'italic' : 'normal';
-      span.style.webkitTextStroke = strokeW;
-      span.style.textShadow = buildTextShadowCss(item);
-      container.appendChild(span);
+      const a = tt * absSpan;
+      const y = direction > 0 ? -radius*Math.cos(a) : radius*Math.cos(a) - radius;
+      mn = Math.min(mn, y); mx = Math.max(mx, y);
+    }
+    return -(mn + mx)/2;
+  }
+
+  // ---- 「右/左に向かって大きく」（1文字ずつサイズを変える） ----
+  const gradeMeasureCtx = document.createElement('canvas').getContext('2d');
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // プレビュー(SVG)と書き出し(canvas)で同じ配置になるよう、位置とサイズはここで一度だけ計算する。
+  // 文字は行ごとに中央寄せ・ベースライン揃え。サイズ傾斜のときの改行は手動改行のみ
+  function computeGradeLayout(item){
+    const fs = item.fontSize;
+    const ctx = gradeMeasureCtx;
+    ctx.font = `${item.italic ? 'italic ' : ''}900 ${fs}px "${item.fontFamily}", "Hiragino Sans", sans-serif`;
+    const grade = isGrade(item);
+    const k = (item.gradeStrength || 50) / 100; // いちばん小さい文字は (1-k) 倍
+    const lineH = fs * 1.2;
+    const m = ctx.measureText('あ');
+    const asc = m.fontBoundingBoxAscent, desc = m.fontBoundingBoxDescent;
+    const baseOff = (asc != null && desc != null && (asc + desc) > 0) ? (asc - desc)/2 : fs*0.38;
+    const lines = grade ? (item.text || '').split('\n') : wrapText(ctx, item.text || '', item.w);
+    const H = lines.length * lineH;
+    const out = [];
+    lines.forEach((line, li) => {
+      const chars = [...line];
+      const n = chars.length;
+      if(!n) return;
+      const glyphs = [];
+      let total = 0;
+      chars.forEach((ch, i) => {
+        let scale = 1;
+        if(grade){
+          const tt = n === 1 ? 1 : i/(n-1);
+          const rel = (n === 1) ? 1 : (item.gradeMode === 'left' ? 1 - tt : tt);
+          scale = (1 - k) + k*rel;
+        }
+        const w = ctx.measureText(ch).width * scale;
+        glyphs.push({ ch, size: fs*scale, w });
+        total += w;
+      });
+      let cx = -total/2;
+      glyphs.forEach(g => { g.x = cx; cx += g.w; });
+      out.push({ y: -H/2 + li*lineH + lineH/2 + baseOff, glyphs });
     });
+    return out;
+  }
+
+  // 1文字ごとの位置・大きさ・回転。プレビューと書き出しで共通
+  // g0/g1 はグラデーションの上端・下端（文字サイズに対する割合、文字の基準位置からの相対）
+  function computeSvgGlyphs(item){
+    if(isArcMode(item)){
+      const L = computeArcLayout(item.text || '', item.arc, item.fontSize);
+      const yOff = arcYOffset(L);
+      return L.chars.map((ch, i) => {
+        const tt = L.n === 1 ? 0 : (i/(L.n-1) - 0.5);
+        const angle = tt * L.absSpan;
+        const x = L.radius * Math.sin(angle);
+        const y = (L.direction > 0 ? -L.radius*Math.cos(angle) : L.radius*Math.cos(angle) - L.radius) + yOff;
+        return { ch, size: item.fontSize, x, y, rot: angle*L.direction, arc: true, g0: -0.5, g1: 0.5 };
+      });
+    }
+    const out = [];
+    computeGradeLayout(item).forEach(L => L.glyphs.forEach(g => {
+      out.push({ ch: g.ch, size: g.size, x: g.x, y: L.y, rot: 0, arc: false, g0: -0.85, g1: 0.12 });
+    }));
+    return out;
+  }
+
+  // 袋（線）の幅と、中抜き時に発光・影のもとにする線の色
+  function glowStroke(item, size){
+    if(hasOutlineBorder(item)) return { w: outlineBorderStrokePx(item, size), color: item.outlineBorderColor };
+    return { w: outlineStrokePx(item, size), color: item.outlineColor };
+  }
+
+  function renderGradePreview(item){
+    const box = item.gradePreviewEl;
+    box.innerHTML = '';
+    const glyphs = computeSvgGlyphs(item);
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('width', '1');
+    svg.setAttribute('height', '1');
+    svg.style.cssText = 'position:absolute;left:50%;top:50%;overflow:visible;';
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    svg.appendChild(defs);
+    const fs = item.fontSize;
+    const border = hasOutlineBorder(item);
+    const hollow = isHollow(item);
+    const grad = hasGradient(item);
+    const stops = grad ? gradientStops(item) : null;
+    let gcount = 0;
+    const gradUrl = gl => {
+      if(gl._gid) return gl._gid;
+      const id = `wcg${item.id}_${gcount++}`;
+      const lg = document.createElementNS(SVG_NS, 'linearGradient');
+      lg.setAttribute('id', id);
+      lg.setAttribute('gradientUnits', 'userSpaceOnUse');
+      lg.setAttribute('x1', '0'); lg.setAttribute('x2', '0');
+      lg.setAttribute('y1', (gl.g0*gl.size).toFixed(2));
+      lg.setAttribute('y2', (gl.g1*gl.size).toFixed(2));
+      stops.forEach((c, i) => {
+        const st = document.createElementNS(SVG_NS, 'stop');
+        st.setAttribute('offset', (i/(stops.length-1)).toFixed(3));
+        st.setAttribute('stop-color', c);
+        lg.appendChild(st);
+      });
+      defs.appendChild(lg);
+      gl._gid = `url(#${id})`;
+      return gl._gid;
+    };
+    const addLayer = (paint, filter) => {
+      const g = document.createElementNS(SVG_NS, 'g');
+      if(filter) g.style.filter = filter;
+      glyphs.forEach(gl => {
+        if(!gl.ch.trim()) return;
+        const p = paint(gl);
+        const tx = document.createElementNS(SVG_NS, 'text');
+        tx.setAttribute('transform', `translate(${gl.x.toFixed(2)} ${gl.y.toFixed(2)}) rotate(${(gl.rot*180/Math.PI).toFixed(3)})`);
+        tx.setAttribute('x', '0'); tx.setAttribute('y', '0');
+        if(gl.arc){ tx.setAttribute('text-anchor', 'middle'); tx.setAttribute('dominant-baseline', 'central'); }
+        tx.setAttribute('font-size', gl.size.toFixed(2));
+        tx.setAttribute('font-family', `"${item.fontFamily}", "Hiragino Sans", sans-serif`);
+        tx.setAttribute('font-weight', '900');
+        if(item.italic) tx.setAttribute('font-style', 'italic');
+        tx.setAttribute('fill', p.fill);
+        if(p.stroke){
+          tx.setAttribute('stroke', p.stroke);
+          tx.setAttribute('stroke-width', p.sw.toFixed(2));
+          tx.setAttribute('stroke-linejoin', 'round');
+        }
+        tx.textContent = gl.ch;
+        g.appendChild(tx);
+      });
+      svg.appendChild(g);
+    };
+    const fillPaint = gl => ({ fill: grad ? gradUrl(gl) : item.color });
+    const outlinePaint = gl => ({ fill: hollow ? 'none' : item.outlineColor, stroke: item.outlineColor, sw: outlineStrokePx(item, gl.size) });
+    const borderPaint = gl => ({ fill: hollow ? 'none' : item.outlineBorderColor, stroke: item.outlineBorderColor, sw: outlineBorderStrokePx(item, gl.size) });
+    const glowPaint = border ? borderPaint : outlinePaint;
+    const glowColor = hollow ? glowStroke(item, fs).color : item.color;
+    if(item.shadow){
+      const sk = item.shadowStrength || 1;
+      addLayer(hollow ? glowPaint : (border ? borderPaint : (item.outline ? outlinePaint : fillPaint)),
+        `drop-shadow(${fs*0.05*sk}px ${fs*0.06*sk}px ${fs*0.1*sk}px rgba(0,0,0,.55))`);
+    }
+    if(item.neon){
+      const base = fs * (item.neonStrength || 1);
+      [0.45, 0.26, 0.14, 0.06].forEach(f => addLayer(hollow ? glowPaint : fillPaint, `drop-shadow(0 0 ${base*f}px ${glowColor})`));
+    }
+    if(border) addLayer(borderPaint);
+    if(item.outline) addLayer(outlinePaint);
+    if(!hollow) addLayer(fillPaint);
+    box.appendChild(svg);
+    ensureGradeFont(item);
+  }
+
+  // フォントが未読み込みだと幅の計測がずれるので、読み込み完了後に一度だけ描き直す
+  function ensureGradeFont(item){
+    if(!document.fonts || !document.fonts.load) return;
+    const spec = `900 ${item.fontSize}px "${item.fontFamily}"`;
+    const txt = item.text || '';
+    try{ if(document.fonts.check(spec, txt)) return; }catch(e){ return; }
+    document.fonts.load(spec, txt).then(() => {
+      if(isSvgMode(item) && !item.editing && items.includes(item)) renderGradePreview(item);
+    }).catch(() => {});
   }
 
   // ---- テキストオプションパネルの配線 ----
@@ -1443,6 +1665,7 @@
     if(!item || item.type !== 'text') return;
     item.arcEnabled = !item.arcEnabled;
     if(item.arcEnabled && item.arc === 0){ item.arc = 40; arcRange.value = 40; } // ONにした瞬間に変化が分かるよう初期値を入れる
+    if(item.arcEnabled && isGrade(item)){ item.gradeMode = 'none'; syncGradeUi(item); } // 弧とサイズ傾斜は同時に使えない
     arcChip.classList.toggle('on', item.arcEnabled);
     arcOptionsEl.style.display = item.arcEnabled ? 'flex' : 'none';
     applyArcModeVisibility(item);
@@ -1454,6 +1677,285 @@
     item.arc = parseInt(arcRange.value, 10) || 0;
     applyArcModeVisibility(item);
   });
+
+  // ---- 文字の内容を入力欄から変更 ----
+  textContentInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.text = textContentInput.value;
+    item.editEl.textContent = item.text;
+    refreshTextVisuals(item);
+  });
+  textContentInput.addEventListener('change', () => pushHistory());
+  // ダブルクリック等でキャンバス上で編集した場合も入力欄に反映する
+  document.addEventListener('input', e => {
+    if(e.target && e.target.classList && e.target.classList.contains('text-edit')){
+      const item = getItem(selectedId);
+      if(item && item.type === 'text' && item.editEl === e.target) textContentInput.value = e.target.textContent;
+    }
+  });
+
+  // ---- 中抜き（蛍光管のように線だけで描く） ----
+  hollowChip.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.hollow = !item.hollow;
+    if(item.hollow && !item.outline){
+      // 線がないと何も見えないので、文字色の細い線を自動で付ける
+      item.outline = true; item.outlineColor = item.color; item.outlineWidth = 6;
+      outlineChip.classList.add('on');
+      outlineOptionsEl.style.display = 'flex';
+      outlineColorInput.value = item.outlineColor;
+      outlineWidthInput.value = item.outlineWidth;
+    }
+    hollowChip.classList.toggle('on', item.hollow);
+    refreshTextVisuals(item);
+    pushHistory();
+  });
+
+  // ---- グラデーション（上＝文字色、下＝下の色） ----
+  gradientChip.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.gradient = hasGradient(item) ? null : [item.color, gradientBottomInput.value || '#ff3d81'];
+    gradientChip.classList.toggle('on', hasGradient(item));
+    gradientOptionsEl.style.display = hasGradient(item) ? 'flex' : 'none';
+    refreshTextVisuals(item);
+    pushHistory();
+  });
+  gradientBottomInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text' || !hasGradient(item)) return;
+    item.gradient[item.gradient.length-1] = gradientBottomInput.value;
+    refreshTextVisuals(item);
+  });
+  gradientBottomInput.addEventListener('change', () => pushHistory());
+
+  // ---- 袋文字の縁取り ----
+  outlineBorderChip.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.outlineBorder = !item.outlineBorder;
+    outlineBorderChip.classList.toggle('on', item.outlineBorder);
+    outlineBorderOptionsEl.style.display = item.outlineBorder ? 'flex' : 'none';
+    refreshTextVisuals(item);
+    pushHistory();
+  });
+  outlineBorderColorInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.outlineBorderColor = outlineBorderColorInput.value;
+    refreshTextVisuals(item);
+  });
+  outlineBorderColorInput.addEventListener('change', () => pushHistory());
+  outlineBorderWidthInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.outlineBorderWidth = parseInt(outlineBorderWidthInput.value, 10) || 8;
+    refreshTextVisuals(item);
+  });
+  outlineBorderWidthInput.addEventListener('change', () => pushHistory());
+  bindSliderReset(document.getElementById('outlineBorderWidthReset'), outlineBorderWidthInput, 8);
+
+  // ---- 右/左に向かって大きく ----
+  function syncGradeUi(item){
+    gradeRightChip.classList.toggle('on', item.gradeMode === 'right');
+    gradeLeftChip.classList.toggle('on', item.gradeMode === 'left');
+    gradeOptionsEl.style.display = isGrade(item) ? 'flex' : 'none';
+  }
+  function syncArcUi(item){
+    arcChip.classList.toggle('on', item.arcEnabled);
+    arcOptionsEl.style.display = item.arcEnabled ? 'flex' : 'none';
+  }
+  function toggleGrade(mode){
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.gradeMode = (item.gradeMode === mode) ? 'none' : mode;
+    if(isGrade(item) && item.arcEnabled){ item.arcEnabled = false; syncArcUi(item); } // 弧とサイズ傾斜は同時に使えない
+    syncGradeUi(item);
+    applyArcModeVisibility(item);
+    pushHistory();
+  }
+  gradeRightChip.addEventListener('click', () => toggleGrade('right'));
+  gradeLeftChip.addEventListener('click', () => toggleGrade('left'));
+  gradeStrengthInput.addEventListener('input', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.gradeStrength = parseInt(gradeStrengthInput.value, 10) || 50;
+    applyArcModeVisibility(item);
+  });
+  gradeStrengthInput.addEventListener('change', () => pushHistory());
+  bindSliderReset(document.getElementById('gradeStrengthReset'), gradeStrengthInput, 50);
+
+  // ---- ロゴスタイル見本（ツリー表示） ----
+  // 見本はテキスト機能（色・袋文字＋縁取り・影・ネオン・斜体・弧・サイズ傾斜）の組み合わせだけで作っている。
+  // サムネイルは実際の書き出しと同じ drawTextItem で描くので、クリックして追加した結果と見た目が一致する
+  const LOGO_TEXT_DEFAULTS = {
+    fontFamily: 'Zen Kaku Gothic New', color: '#ffffff', gradient: null, hollow: false,
+    outline: false, outlineColor: '#000000', outlineWidth: 12,
+    outlineBorder: false, outlineBorderColor: '#ffffff', outlineBorderWidth: 8,
+    shadow: false, shadowStrength: 1, neon: false, neonStrength: 1, italic: false,
+    arc: 0, arcEnabled: false, gradeMode: 'none', gradeStrength: 50
+  };
+
+  // ネオン管：中抜き + 白い芯線(袋) + 色付きの管(縁取り) + 発光。thumbBgは見本の背景（暗い夜の看板風）
+  const tube = (fontFamily, glow, core, extra) => ({
+    fontFamily, color: glow, hollow: true,
+    outline: true, outlineColor: core, outlineWidth: 4,
+    outlineBorder: true, outlineBorderColor: glow, outlineBorderWidth: 3.2,
+    neon: true, neonStrength: 1.5, thumbBg: '#0b0d18', ...extra
+  });
+  // 金属・グラデーション文字：太い暗色の袋 + 明るい縁取り
+  const metal = (fontFamily, stops, edge, rim, extra) => ({
+    fontFamily, color: stops[0], gradient: stops,
+    outline: true, outlineColor: edge, outlineWidth: 11,
+    outlineBorder: true, outlineBorderColor: rim, outlineBorderWidth: 5,
+    shadow: true, shadowStrength: 1.3, ...extra
+  });
+
+  const CHROME = ['#f8fbff', '#b9c6d8', '#4a5670', '#1c2333', '#7f92b0', '#e2ecf7'];
+  const GOLD   = ['#fff7c2', '#ffd84d', '#c58f0a', '#6e4300', '#e6b422', '#fff0a0'];
+  const SILVER = ['#ffffff', '#d5d9e0', '#8b93a3', '#4d5467', '#c9ced8', '#ffffff'];
+  const COPPER = ['#ffe3c8', '#e8955c', '#8a4b25', '#41200f', '#c97b4a', '#ffd2a8'];
+
+  const LOGO_STYLE_TREE = [
+    { id:'tube', labelKey:'logo_cat_tube', styles:[
+      tube('Zen Maru Gothic', '#ff2bd6', '#ffe9fa'),
+      tube('Zen Maru Gothic', '#00e5ff', '#e8ffff'),
+      tube('M PLUS Rounded 1c', '#39ff14', '#f3ffe6'),
+      tube('Dela Gothic One', '#ffb300', '#fff6da'),
+      tube('Reggae One', '#ff2a4d', '#ffe6ea'),
+      tube('Zen Maru Gothic', '#8f5cff', '#f1ecff')
+    ]},
+    { id:'metal', labelKey:'logo_cat_metal', styles:[
+      metal('Dela Gothic One', CHROME, '#0f1422', '#ffffff'),
+      metal('Dela Gothic One', GOLD, '#3a2200', '#fff6c9'),
+      metal('Zen Antique', SILVER, '#1b1f2b', '#ffffff'),
+      metal('Zen Antique', COPPER, '#2a1206', '#ffe7d0'),
+      metal('Dela Gothic One', CHROME, '#10131c', '#ff2d55', { italic:true })
+    ]},
+    { id:'flame', labelKey:'logo_cat_flame', styles:[
+      metal('Dela Gothic One', ['#fffbd0', '#ffe100', '#ff8c00', '#e01b00', '#7a0000'], '#3a0500', '#ffb800', { neon:true, neonStrength:0.7 }),
+      metal('Dela Gothic One', ['#ffffff', '#c6f4ff', '#55bfff', '#1565c0'], '#08245a', '#ffffff', { neon:true, neonStrength:0.6, thumbBg:'#101a2e' }),
+      metal('Dela Gothic One', ['#f4ff8a', '#a5ff00', '#25d000', '#00631b'], '#04240c', '#e9ff9c', { neon:true, neonStrength:0.6, thumbBg:'#0d1a10' }),
+      metal('Dela Gothic One', ['#ffe259', '#ffa751', '#ff5e62', '#8e2de2'], '#2a0a3d', '#ffffff', { italic:true }),
+      metal('Dela Gothic One', ['#ff0000', '#ff9900', '#ffee00', '#22dd22', '#0099ff', '#7a3cff'], '#1a1a1a', '#ffffff')
+    ]},
+    { id:'comic', labelKey:'logo_cat_comic', styles:[
+      metal('Reggae One', ['#fff35c', '#ffc400'], '#1a1a1a', '#ffffff', { outlineWidth:14 }),
+      metal('Potta One', ['#ffb3d9', '#ff4fa3'], '#ffffff', '#d81b7a', { outlineWidth:14, outlineBorderWidth:6 }),
+      metal('RocknRoll One', ['#7be7ff', '#1e88ff'], '#ffffff', '#0d3b8f', { outlineWidth:14, outlineBorderWidth:6 }),
+      metal('Reggae One', ['#ff7a7a', '#c40000'], '#ffffff', '#111111', { outlineWidth:14 }),
+      metal('Hachi Maru Pop', ['#fffdf0', '#ffe9a8'], '#ff7a1a', '#ffffff', { outlineWidth:16, outlineBorderWidth:5 })
+    ]},
+    { id:'game', labelKey:'logo_cat_game', styles:[
+      metal('Dela Gothic One', ['#ffffff', '#ffe66b', '#ff9d00'], '#7a1200', '#000000', { italic:true, outlineWidth:14, outlineBorderWidth:7 }),
+      metal('Dela Gothic One', ['#c9fff2', '#00e0c6', '#007a8a'], '#03303b', '#ffffff', { italic:true, outlineWidth:13 }),
+      metal('Dela Gothic One', ['#f7d9ff', '#a24bff', '#4b1a99'], '#1a0a3d', '#ffffff', { italic:true, outlineWidth:13 }),
+      metal('Train One', ['#ffffff', '#ff8a8a', '#d40000'], '#4d0000', '#ffe600', { italic:true, outlineWidth:12 })
+    ]},
+    { id:'grow', labelKey:'logo_cat_grow', styles:[
+      metal('Dela Gothic One', ['#ffffff', '#ffb0c8', '#ff2d55'], '#7a0a26', '#ffffff', { gradeMode:'right', gradeStrength:60 }),
+      metal('RocknRoll One', ['#fffbe0', '#ffe600', '#ff9500'], '#2b1a00', '#ffffff', { gradeMode:'left', gradeStrength:55 }),
+      metal('Reggae One', ['#d8fff8', '#00e0c6', '#0072c6'], '#052b57', '#ffffff', { gradeMode:'right', gradeStrength:70 }),
+      metal('Dela Gothic One', CHROME, '#0f1422', '#ffffff', { gradeMode:'left', gradeStrength:65 })
+    ]},
+    { id:'wafu', labelKey:'logo_cat_wafu', styles:[
+      metal('Zen Antique', GOLD, '#5a0010', '#f7e7a1', { outlineWidth:12 }),
+      metal('Zen Old Mincho', ['#ff8f80', '#d81b2a', '#7a0010'], '#ffffff', '#1a1a1a', { outlineWidth:12 }),
+      metal('Shippori Mincho', SILVER, '#1a2440', '#dfe8ff', { outlineWidth:12 }),
+      { fontFamily:'Zen Old Mincho', color:'#111111', outline:true, outlineColor:'#ffffff', outlineWidth:12, outlineBorder:true, outlineBorderColor:'#b00020', outlineBorderWidth:5 }
+    ]},
+    { id:'arc', labelKey:'logo_cat_arc', styles:[
+      metal('Dela Gothic One', GOLD, '#3a2200', '#fff6c9', { sample:'LOGO', arcEnabled:true, arc:28 }),
+      metal('Dela Gothic One', ['#ff7a7a', '#c40000'], '#ffffff', '#111111', { sample:'LOGO', arcEnabled:true, arc:28, outlineWidth:14 }),
+      metal('Dela Gothic One', ['#ffffff', '#c6f4ff', '#55bfff', '#1565c0'], '#08245a', '#ffffff', { sample:'LOGO', arcEnabled:true, arc:-28 }),
+      tube('Dela Gothic One', '#ff2bd6', '#ffe9fa', { sample:'LOGO', arcEnabled:true, arc:28 })
+    ]}
+  ];
+
+  const LOGO_THUMB_W = 140, LOGO_THUMB_H = 60, LOGO_THUMB_FS = 28;
+
+  function logoStyleToOpts(style){
+    const o = { ...LOGO_TEXT_DEFAULTS, ...style };
+    delete o.thumbBg; delete o.sample;
+    return o;
+  }
+  function drawLogoThumb(canvas, style, sampleText){
+    const dpr = 2;
+    canvas.width = LOGO_THUMB_W*dpr; canvas.height = LOGO_THUMB_H*dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = style.thumbBg || '#262a33';
+    ctx.fillRect(0, 0, LOGO_THUMB_W, LOGO_THUMB_H);
+    const opts = logoStyleToOpts(style);
+    const it = { ...opts, x:0, y:0, w:LOGO_THUMB_W, h:LOGO_THUMB_H, rotation:0, bgColor:null, text:style.sample || sampleText, fontSize:LOGO_THUMB_FS };
+    drawTextItem(ctx, it);
+  }
+
+  function renderLogoThumbs(catDetails, cat){
+    const sampleText = t('logo_sample_text');
+    const canvases = [...catDetails.querySelectorAll('canvas')];
+    const draw = () => canvases.forEach((cv, i) => drawLogoThumb(cv, cat.styles[i], sampleText));
+    // Webフォントは使われるまで読み込まれないので、見本で使うフォントを先に読み込んでから描く
+    const fams = [...new Set(cat.styles.map(st => st.fontFamily || LOGO_TEXT_DEFAULTS.fontFamily))];
+    if(document.fonts && document.fonts.load){
+      Promise.race([
+        Promise.all(fams.map(f => document.fonts.load(`900 ${LOGO_THUMB_FS}px "${f}"`, sampleText).catch(() => {}))),
+        new Promise(res => setTimeout(res, 2500))
+      ]).then(draw);
+    }
+    draw();
+  }
+
+  // 選択中のテキストにスタイルだけを適用する（文字・文字サイズ・背景色・枠の大きさは変えない）
+  function applyLogoStyle(style){
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    if(item.editing) item.editEl.blur();
+    const opts = logoStyleToOpts(style);
+    ['fontFamily','color','outline','outlineColor','outlineWidth','outlineBorder','outlineBorderColor','outlineBorderWidth',
+     'shadow','shadowStrength','neon','neonStrength','italic','arc','arcEnabled','gradeMode','gradeStrength','hollow']
+      .forEach(k => { item[k] = opts[k]; });
+    item.gradient = Array.isArray(opts.gradient) ? opts.gradient.slice() : null;
+    refreshTextVisuals(item);
+    selectItem(item.id); // パネル側のチップ・スライダー表示を新しい値に合わせる
+    pushHistory();
+  }
+
+  function renderLogoTree(){
+    const host = document.getElementById('logoTree');
+    if(!host) return;
+    // 言語切替などで作り直しても、開いていたカテゴリは開いたままにする
+    const openIds = new Set([...host.querySelectorAll('details[open]')].map(d => d.dataset.cat));
+    host.innerHTML = '';
+    LOGO_STYLE_TREE.forEach(cat => {
+      const det = document.createElement('details');
+      det.className = 'logo-cat';
+      det.dataset.cat = cat.id;
+      const sum = document.createElement('summary');
+      sum.textContent = t(cat.labelKey);
+      det.appendChild(sum);
+      const grid = document.createElement('div');
+      grid.className = 'logo-grid';
+      cat.styles.forEach(style => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'logo-style-btn';
+        btn.title = t(cat.labelKey);
+        const cv = document.createElement('canvas');
+        cv.width = LOGO_THUMB_W*2; cv.height = LOGO_THUMB_H*2;
+        btn.appendChild(cv);
+        btn.addEventListener('click', () => applyLogoStyle(style));
+        grid.appendChild(btn);
+      });
+      det.appendChild(grid);
+      det.addEventListener('toggle', () => { if(det.open) renderLogoThumbs(det, cat); });
+      host.appendChild(det);
+      if(openIds.has(cat.id)){ det.open = true; } // openにするとtoggleイベントで見本が描かれる
+    });
+  }
+  renderLogoTree();
 
   // ---- 要素の生成 ----
   function createBaseEl(x, y, w, h){
@@ -1903,6 +2405,11 @@
     bgEl.className = 'text-bg';
     content.appendChild(bgEl);
 
+    const borderEl = document.createElement('div');
+    borderEl.className = 'text-edit text-border-layer';
+    borderEl.setAttribute('aria-hidden', 'true');
+    content.appendChild(borderEl);
+
     const editEl = document.createElement('div');
     editEl.className = 'text-edit';
     editEl.contentEditable = 'false';
@@ -1914,6 +2421,10 @@
     arcPreviewEl.className = 'text-arc-preview';
     content.appendChild(arcPreviewEl);
 
+    const gradePreviewEl = document.createElement('div');
+    gradePreviewEl.className = 'text-grade-preview';
+    content.appendChild(gradePreviewEl);
+
     el.appendChild(content);
     const handlesEl = buildHandles(true);
     el.appendChild(handlesEl);
@@ -1924,17 +2435,21 @@
     const fontSize = opts.fontSize != null ? opts.fontSize : Math.max(10, Math.round(h*0.55));
     const item = {
       id, type:'text', x, y, w, h, rotation, el, contentEl: content, handlesEl,
-      editEl, bgEl, arcPreviewEl, text, fontSize,
+      editEl, bgEl, arcPreviewEl, borderEl, gradePreviewEl, text, fontSize,
       fontFamily: opts.fontFamily || 'Zen Kaku Gothic New',
       color: opts.color || '#9acd32',
       bgColor: opts.bgColor != null ? opts.bgColor : null,
       outline: !!opts.outline, outlineColor: opts.outlineColor || '#000000', outlineWidth: opts.outlineWidth || 12,
+      outlineBorder: !!opts.outlineBorder, outlineBorderColor: opts.outlineBorderColor || '#ffffff', outlineBorderWidth: opts.outlineBorderWidth || 8,
+      gradeMode: opts.gradeMode || 'none', gradeStrength: opts.gradeStrength || 50,
+      hollow: !!opts.hollow, gradient: Array.isArray(opts.gradient) ? opts.gradient.slice() : null,
       shadow: !!opts.shadow, shadowStrength: opts.shadowStrength || 1,
       neon: !!opts.neon, neonStrength: opts.neonStrength || 1, italic: !!opts.italic,
       arc: opts.arc || 0, arcEnabled: !!opts.arcEnabled,
       editing: false, cropping:false
     };
     items.push(item);
+    editEl.addEventListener('input', () => { if(hasOutlineBorder(item)) borderEl.innerHTML = editEl.innerHTML; });
     reflectOrder(); // 新規追加時にも明示的な重なり順(z-index)を必ず反映させる
     bindItemInteractions(item);
     refreshTextVisuals(item);
@@ -2836,60 +3351,103 @@
   }
 
   // 影・袋文字・ネオン発光・本体の描画順序を1箇所にまとめる（弧文字と通常文字の両方で使う）
-  function drawTextGlyphWithEffects(ctx, item, text, x, y){
-    if(item.shadow){
+  // 文字1つ(または1行)を「影 → 発光 → 縁取り → 袋 → 本体」の順に重ね描きする。
+  // layerごとに分けてあるので、弧・サイズ傾斜などでは全文字ぶんの縁取りを先に描いてから本体を重ねられる
+  // g はSVG方式（1文字ずつ描く）のときだけ渡される。角を丸く描き、グラデーションの範囲も決める
+  function drawTextLayer(ctx, item, layer, text, x, y, size, g){
+    size = size || item.fontSize;
+    const border = hasOutlineBorder(item);
+    const hollow = isHollow(item);
+    const outlineW = outlineStrokePx(item, size);
+    const borderW = outlineBorderStrokePx(item, size);
+    const sp = glowStroke(item, size);
+    ctx.lineJoin = g ? 'round' : 'miter';
+    const fillStyle = () => {
+      if(!hasGradient(item)) return item.color;
+      const stops = gradientStops(item);
+      const g0 = g ? g.g0 : -0.5, g1 = g ? g.g1 : 0.5;
+      const gr = ctx.createLinearGradient(0, y + g0*size, 0, y + g1*size);
+      stops.forEach((c, i) => gr.addColorStop(i/(stops.length-1), c));
+      return gr;
+    };
+    if(layer === 'shadow'){
+      if(!item.shadow) return;
+      const sk = item.shadowStrength || 1;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,.55)';
-      ctx.shadowBlur = item.fontSize*0.1*(item.shadowStrength||1);
-      ctx.shadowOffsetX = item.fontSize*0.05*(item.shadowStrength||1);
-      ctx.shadowOffsetY = item.fontSize*0.06*(item.shadowStrength||1);
-      if(item.outline){
-        ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
+      ctx.shadowBlur = item.fontSize*0.1*sk;
+      ctx.shadowOffsetX = item.fontSize*0.05*sk;
+      ctx.shadowOffsetY = item.fontSize*0.06*sk;
+      if(hollow){
+        ctx.lineWidth = sp.w; ctx.strokeStyle = sp.color;
+        ctx.strokeText(text, x, y);
+      } else if(border){
+        ctx.lineWidth = borderW;
+        ctx.strokeStyle = item.outlineBorderColor;
+        ctx.strokeText(text, x, y);
+      } else if(item.outline){
+        ctx.lineWidth = outlineW;
         ctx.strokeStyle = item.outlineColor;
         ctx.strokeText(text, x, y);
       } else {
-        ctx.fillStyle = item.color;
+        ctx.fillStyle = fillStyle();
         ctx.fillText(text, x, y);
       }
       ctx.restore(); // シャドウ設定を解除してから、くっきりした本体を重ね描きする
-    }
-    if(item.neon){
+    } else if(layer === 'neon'){
+      if(!item.neon) return;
       // ぼかし半径を段階的に変えながら同じ文字を重ね描きし、発光しているように見せる
       ctx.save();
-      ctx.shadowColor = item.color;
-      ctx.fillStyle = item.color;
       const base = item.fontSize * (item.neonStrength||1);
-      [0.45, 0.26, 0.14, 0.06].forEach(f => {
-        ctx.shadowBlur = base*f;
-        ctx.fillText(text, x, y);
-      });
+      if(hollow){
+        ctx.shadowColor = sp.color;
+        ctx.strokeStyle = sp.color;
+        ctx.lineWidth = sp.w;
+        [0.45, 0.26, 0.14, 0.06].forEach(f => { ctx.shadowBlur = base*f; ctx.strokeText(text, x, y); });
+      } else {
+        ctx.shadowColor = item.color;
+        ctx.fillStyle = item.color;
+        [0.45, 0.26, 0.14, 0.06].forEach(f => { ctx.shadowBlur = base*f; ctx.fillText(text, x, y); });
+      }
       ctx.restore();
-    }
-    if(item.outline){
-      ctx.lineWidth = Math.max(1, item.fontSize*item.outlineWidth/100);
+    } else if(layer === 'border'){
+      if(!border) return;
+      ctx.lineWidth = borderW;
+      ctx.strokeStyle = item.outlineBorderColor;
+      ctx.strokeText(text, x, y);
+    } else if(layer === 'outline'){
+      if(!item.outline) return;
+      ctx.lineWidth = outlineW;
       ctx.strokeStyle = item.outlineColor;
       ctx.strokeText(text, x, y);
+    } else {
+      if(hollow) return;
+      ctx.fillStyle = fillStyle();
+      ctx.fillText(text, x, y);
     }
-    ctx.fillStyle = item.color;
-    ctx.fillText(text, x, y);
+  }
+  const TEXT_LAYERS = ['shadow', 'neon', 'border', 'outline', 'fill'];
+
+  function drawTextGlyphWithEffects(ctx, item, text, x, y, size){
+    TEXT_LAYERS.forEach(layer => drawTextLayer(ctx, item, layer, text, x, y, size));
   }
 
-  function drawArcTextInner(ctx, item){
-    const { chars, n, direction, absSpan, radius } = computeArcLayout(item.text || '', item.arc, item.fontSize);
-    if(n === 0) return;
+  // 弧・サイズ傾斜・中抜き・グラデーション：1文字ずつ描く（プレビューのSVGと同じ位置計算）
+  function drawSvgModeInner(ctx, item){
+    const glyphs = computeSvgGlyphs(item);
     const style = item.italic ? 'italic ' : '';
-    ctx.font = `${style}900 ${item.fontSize}px "${item.fontFamily}", sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    chars.forEach((ch, i) => {
-      const tt = n === 1 ? 0 : (i/(n-1) - 0.5);
-      const angle = tt * absSpan * direction;
-      const x = radius * Math.sin(angle);
-      const y = direction > 0 ? -radius*Math.cos(angle) : radius*Math.cos(angle) - radius;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(angle*direction);
-      drawTextGlyphWithEffects(ctx, item, ch, 0, 0);
-      ctx.restore();
+    TEXT_LAYERS.forEach(layer => {
+      glyphs.forEach(g => {
+        if(!g.ch.trim()) return;
+        ctx.save();
+        ctx.translate(g.x, g.y);
+        ctx.rotate(g.rot);
+        ctx.font = `${style}900 ${g.size}px "${item.fontFamily}", "Hiragino Sans", sans-serif`;
+        ctx.textAlign = g.arc ? 'center' : 'left';
+        ctx.textBaseline = g.arc ? 'middle' : 'alphabetic';
+        drawTextLayer(ctx, item, layer, g.ch, 0, 0, g.size, g);
+        ctx.restore();
+      });
     });
   }
 
@@ -2902,8 +3460,8 @@
       ctx.fillStyle = item.bgColor;
       ctx.fillRect(-item.w/2, -item.h/2, item.w, item.h);
     }
-    if(item.arcEnabled && item.arc !== 0){
-      drawArcTextInner(ctx, item);
+    if(isSvgMode(item)){
+      drawSvgModeInner(ctx, item);
       ctx.restore();
       return;
     }
@@ -3046,6 +3604,9 @@
           type:'text', x:it.x, y:it.y, w:it.w, h:it.h, rotation:it.rotation,
           text: it.text, fontSize: it.fontSize, fontFamily: it.fontFamily, color: it.color, bgColor: it.bgColor,
           outline: it.outline, outlineColor: it.outlineColor, outlineWidth: it.outlineWidth,
+          outlineBorder: it.outlineBorder, outlineBorderColor: it.outlineBorderColor, outlineBorderWidth: it.outlineBorderWidth,
+          gradeMode: it.gradeMode, gradeStrength: it.gradeStrength,
+          hollow: it.hollow, gradient: it.gradient,
           shadow: it.shadow, shadowStrength: it.shadowStrength, neon: it.neon, neonStrength: it.neonStrength, italic: it.italic, arc: it.arc, arcEnabled: it.arcEnabled
         };
       })

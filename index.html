@@ -81,6 +81,13 @@
     </div>
 
     <div class="panel-box text-options" id="textOptions" style="display:none">
+      <label data-i18n="text_content_label">文字</label>
+      <textarea id="textContentInput" rows="2" spellcheck="false"></textarea>
+      <details class="logo-tree-root" id="logoTreeRoot">
+        <summary data-i18n="logo_tree_title">ロゴスタイル見本</summary>
+        <div class="hint" data-i18n="logo_tree_hint">見本をクリックすると、選択中のテキストにそのスタイルが適用されます（文字・サイズ・位置はそのまま）</div>
+        <div class="logo-tree" id="logoTree"></div>
+      </details>
       <label data-i18n="opt_font_label">フォント</label>
       <select id="fontSelect">
         <optgroup label="ゴシック" data-i18n-label="font_group_gothic">
@@ -136,8 +143,12 @@
         <span class="chip" id="outlineChip" data-i18n="outline_chip">袋文字</span>
         <span class="chip" id="shadowChip" data-i18n="shadow_chip">影文字</span>
         <span class="chip" id="neonChip" data-i18n="neon_chip">ネオン文字</span>
+        <span class="chip" id="hollowChip" data-i18n="hollow_chip">中抜き</span>
+        <span class="chip" id="gradientChip" data-i18n="gradient_chip">グラデーション</span>
         <span class="chip" id="italicChip" data-i18n="italic_chip">斜め文字</span>
         <span class="chip" id="arcChip" data-i18n="opt_arc_label">弧を描く</span>
+        <span class="chip" id="gradeRightChip" data-i18n="grade_right_chip">右に向かって大きく</span>
+        <span class="chip" id="gradeLeftChip" data-i18n="grade_left_chip">左に向かって大きく</span>
       </div>
       <div class="sub-panel" id="outlineOptions" style="display:none">
         <label data-i18n="outline_color_label">袋の色</label>
@@ -147,6 +158,18 @@
           <button class="reset-slider-btn" id="outlineWidthReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
         </div>
         <input type="range" id="outlineWidth" min="2" max="30" value="12">
+        <div class="chip-row">
+          <span class="chip" id="outlineBorderChip" data-i18n="outline_border_chip">縁取りを追加</span>
+        </div>
+        <div class="sub-panel" id="outlineBorderOptions" style="display:none">
+          <label data-i18n="outline_border_color_label">縁取りの色</label>
+          <input type="color" id="outlineBorderColor" value="#ffffff">
+          <div class="label-row">
+            <label data-i18n="outline_border_width_label">縁取りの太さ</label>
+            <button class="reset-slider-btn" id="outlineBorderWidthReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+          </div>
+          <input type="range" id="outlineBorderWidth" min="2" max="30" value="8">
+        </div>
       </div>
       <div class="sub-panel" id="shadowOptions" style="display:none">
         <div class="label-row">
@@ -166,6 +189,17 @@
       <div class="sub-panel" id="arcOptions" style="display:none">
         <label data-i18n="opt_arc_strength_label">カーブの強さ</label>
         <input type="range" id="arcRange" min="-100" max="100" value="0">
+      </div>
+      <div class="sub-panel" id="gradientOptions" style="display:none">
+        <label data-i18n="gradient_bottom_label">下の色</label>
+        <input type="color" id="gradientBottomColor" value="#ff3d81">
+      </div>
+      <div class="sub-panel" id="gradeOptions" style="display:none">
+        <div class="label-row">
+          <label data-i18n="grade_strength_label">大きさの差</label>
+          <button class="reset-slider-btn" id="gradeStrengthReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+        </div>
+        <input type="range" id="gradeStrength" min="10" max="90" value="50">
       </div>
       <button class="ghost small" id="deleteTextBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
     </div>
