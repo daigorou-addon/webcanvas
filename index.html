@@ -149,6 +149,7 @@
         <span class="chip" id="arcChip" data-i18n="opt_arc_label">弧を描く</span>
         <span class="chip" id="gradeRightChip" data-i18n="grade_right_chip">右に向かって大きく</span>
         <span class="chip" id="gradeLeftChip" data-i18n="grade_left_chip">左に向かって大きく</span>
+        <span class="chip" id="extrudeChip" data-i18n="extrude_chip">3D文字</span>
       </div>
       <div class="sub-panel" id="outlineOptions" style="display:none">
         <label data-i18n="outline_color_label">袋の色</label>
@@ -200,6 +201,18 @@
           <button class="reset-slider-btn" id="gradeStrengthReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
         </div>
         <input type="range" id="gradeStrength" min="10" max="90" value="50">
+      </div>
+      <div class="sub-panel" id="extrudeOptions" style="display:none">
+        <div class="label-row">
+          <label data-i18n="extrude_angle_y_label">左右の角度</label>
+          <button class="reset-slider-btn" id="extrudeAngleYReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+        </div>
+        <input type="range" id="extrudeAngleY" min="-80" max="80" value="35">
+        <div class="label-row">
+          <label data-i18n="extrude_angle_x_label">上下の角度</label>
+          <button class="reset-slider-btn" id="extrudeAngleXReset" data-i18n-title="reset_btn_title" title="標準値に戻す">↺</button>
+        </div>
+        <input type="range" id="extrudeAngleX" min="-80" max="80" value="10">
       </div>
       <button class="ghost small" id="deleteTextBtn" data-i18n="delete_selected_btn">選択した要素を削除</button>
     </div>

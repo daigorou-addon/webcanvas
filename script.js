@@ -52,6 +52,10 @@
   const gradeLeftChip = document.getElementById('gradeLeftChip');
   const gradeOptionsEl = document.getElementById('gradeOptions');
   const gradeStrengthInput = document.getElementById('gradeStrength');
+  const extrudeChip = document.getElementById('extrudeChip');
+  const extrudeOptionsEl = document.getElementById('extrudeOptions');
+  const extrudeAngleYInput = document.getElementById('extrudeAngleY');
+  const extrudeAngleXInput = document.getElementById('extrudeAngleX');
   const arcRange = document.getElementById('arcRange');
   const cropBtn = document.getElementById('cropBtn');
   const flipXBtn = document.getElementById('flipXBtn');
@@ -541,6 +545,10 @@
       arcRange.value = sel.arc;
       syncGradeUi(sel);
       gradeStrengthInput.value = sel.gradeStrength || 50;
+      extrudeChip.classList.toggle('on', !!sel.extrude3d);
+      extrudeOptionsEl.style.display = sel.extrude3d ? 'flex' : 'none';
+      extrudeAngleYInput.value = sel.rot3dY != null ? sel.rot3dY : 35;
+      extrudeAngleXInput.value = sel.rot3dX != null ? sel.rot3dX : 10;
       hollowChip.classList.toggle('on', !!sel.hollow);
       gradientChip.classList.toggle('on', hasGradient(sel));
       gradientOptionsEl.style.display = hasGradient(sel) ? 'flex' : 'none';
@@ -1301,7 +1309,11 @@
   function applyArcModeVisibility(item){
     if(item.editing) return;
     item.arcPreviewEl.style.display = 'none';
-    if(isSvgMode(item)){
+    if(item.extrude3d && render3DPreview(item)){
+      item.editEl.style.display = 'none';
+      item.borderEl.style.display = 'none';
+      item.gradePreviewEl.style.display = 'block';
+    } else if(isSvgMode(item)){
       item.editEl.style.display = 'none';
       item.borderEl.style.display = 'none';
       renderGradePreview(item);
@@ -1536,6 +1548,137 @@
     ensureGradeFont(item);
   }
 
+  // ---- 3D文字：文字そのものを3D空間で回転させ、厚み（奥行き）を持たせる ----
+  // 平らな文字を1枚の画像にして、奥行き方向に薄く何十枚も重ね、WebGLで遠近法つきで回転させて描く。
+  // 手前の1枚は元の色、奥の層は暗くして側面にする。プレビューと書き出しで同じ関数(render3DText)を使う
+  const EXTRUDE3D_DEPTH = 0.3; // 厚み＝文字サイズに対する割合
+  const FLAT3D_KEYS = ['text','w','h','fontSize','fontFamily','color','outline','outlineColor','outlineWidth','outlineBorder',
+    'outlineBorderColor','outlineBorderWidth','shadow','shadowStrength','neon','neonStrength','italic','arc','arcEnabled',
+    'gradeMode','gradeStrength','hollow','gradient'];
+  let gl3d = null, gl3dFailed = false;
+
+  function init3D(){
+    if(gl3d) return gl3d;
+    if(gl3dFailed) return null;
+    try{
+      const cv = document.createElement('canvas');
+      const gl = cv.getContext('webgl', { alpha:true, premultipliedAlpha:true, preserveDrawingBuffer:true, antialias:true });
+      if(!gl){ gl3dFailed = true; return null; }
+      const mk = (type, src) => {
+        const sh = gl.createShader(type);
+        gl.shaderSource(sh, src); gl.compileShader(sh);
+        if(!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+        return sh;
+      };
+      const prog = gl.createProgram();
+      gl.attachShader(prog, mk(gl.VERTEX_SHADER,
+        'attribute vec2 a_pos; uniform mat3 u_rot; uniform float u_z; uniform float u_f; uniform vec2 u_half; varying vec2 v_uv;' +
+        'void main(){ vec3 p = u_rot*vec3(a_pos, u_z); v_uv = a_pos/(2.0*u_half) + 0.5;' +
+        ' gl_Position = vec4(p.x/u_half.x, -p.y/u_half.y, 0.0, (u_f - p.z)/u_f); }'));
+      gl.attachShader(prog, mk(gl.FRAGMENT_SHADER,
+        'precision mediump float; uniform sampler2D u_tex; uniform float u_shade; varying vec2 v_uv;' +
+        'void main(){ vec4 c = texture2D(u_tex, v_uv); gl_FragColor = vec4(c.rgb*u_shade, c.a); }'));
+      gl.linkProgram(prog);
+      if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+      gl.useProgram(prog);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      const aPos = gl.getAttribLocation(prog, 'a_pos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      const u = n => gl.getUniformLocation(prog, n);
+      gl3d = { cv, gl, buf, tex, cur:null,
+        uRot:u('u_rot'), uZ:u('u_z'), uF:u('u_f'), uHalf:u('u_half'), uShade:u('u_shade') };
+      return gl3d;
+    }catch(e){
+      console.warn('3D text: WebGL init failed', e);
+      gl3dFailed = true;
+      return null;
+    }
+  }
+
+  // 平らな文字画像（色・袋・影など全部入り）。回転の角度が変わるだけのときは作り直さない
+  function get3DFlat(item){
+    const key = JSON.stringify(FLAT3D_KEYS.map(k => item[k]));
+    if(item._flat3d && item._flat3d.key === key) return item._flat3d;
+    const padX = Math.round(Math.max(item.w*0.15, item.fontSize));
+    const padY = Math.round(Math.max(item.h*0.35, item.fontSize*0.8));
+    const W = item.w + 2*padX, H = item.h + 2*padY;
+    const SS = Math.min(2, 4096/Math.max(W, H));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(W*SS)); cv.height = Math.max(1, Math.round(H*SS));
+    const ctx = cv.getContext('2d');
+    ctx.scale(SS, SS);
+    drawTextItem(ctx, { ...item, x:padX, y:padY, rotation:0, bgColor:null, extrude3d:false });
+    item._flat3d = { key, cv, W, H };
+    return item._flat3d;
+  }
+
+  // 3D文字を描いたcanvas（共有）を返す。サイズは文字枠＋余白。失敗したらnull
+  function render3DText(item){
+    const g = init3D();
+    if(!g) return null;
+    const f = get3DFlat(item);
+    const { gl, cv } = g;
+    if(cv.width !== f.cv.width || cv.height !== f.cv.height){ cv.width = f.cv.width; cv.height = f.cv.height; }
+    gl.viewport(0, 0, cv.width, cv.height);
+    if(g.cur !== f){
+      gl.bindTexture(gl.TEXTURE_2D, g.tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, f.cv);
+      g.cur = f;
+    }
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    const hw = f.W/2, hh = f.H/2;
+    gl.bindBuffer(gl.ARRAY_BUFFER, g.buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-hw,-hh, hw,-hh, -hw,hh, hw,hh]), gl.STATIC_DRAW);
+    const rad = d => d*Math.PI/180;
+    const sY = Math.sin(rad(item.rot3dY != null ? item.rot3dY : 35)), cY = Math.cos(rad(item.rot3dY != null ? item.rot3dY : 35));
+    const sX = Math.sin(rad(item.rot3dX != null ? item.rot3dX : 10)), cX = Math.cos(rad(item.rot3dX != null ? item.rot3dX : 10));
+    // 回転行列 = 上下(X軸) × 左右(Y軸)。uniformMatrix3fvは列優先
+    const r = [[cY, 0, sY], [sX*sY, cX, -sX*cY], [-cX*sY, sX, cX*cY]];
+    gl.uniformMatrix3fv(g.uRot, false, new Float32Array([r[0][0], r[1][0], r[2][0], r[0][1], r[1][1], r[2][1], r[0][2], r[1][2], r[2][2]]));
+    gl.uniform1f(g.uF, Math.max(f.W, f.H)*2.5);
+    gl.uniform2f(g.uHalf, hw, hh);
+    const depth = item.fontSize*EXTRUDE3D_DEPTH;
+    const n = Math.min(80, Math.max(10, Math.ceil(depth)));
+    for(let i = 0; i <= n; i++){ // 奥から手前へ。最後(i=n)が元の色の表面
+      const t = i/n;
+      gl.uniform1f(g.uZ, (t - 0.5)*depth);
+      gl.uniform1f(g.uShade, i === n ? 1 : 0.38 + 0.22*t);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    return { cv, W:f.W, H:f.H };
+  }
+
+  function render3DPreview(item){
+    const r = render3DText(item);
+    if(!r) return false;
+    const box = item.gradePreviewEl;
+    let c = box.firstChild;
+    if(!(c && c.tagName === 'CANVAS')){
+      box.innerHTML = '';
+      c = document.createElement('canvas');
+      box.appendChild(c);
+    }
+    if(c.width !== r.cv.width || c.height !== r.cv.height){ c.width = r.cv.width; c.height = r.cv.height; }
+    c.style.cssText = `position:absolute;left:50%;top:50%;width:${r.W}px;height:${r.H}px;transform:translate(-50%,-50%);`;
+    const cctx = c.getContext('2d');
+    cctx.clearRect(0, 0, c.width, c.height);
+    cctx.drawImage(r.cv, 0, 0);
+    ensureGradeFont(item);
+    return true;
+  }
+
   // フォントが未読み込みだと幅の計測がずれるので、読み込み完了後に一度だけ描き直す
   function ensureGradeFont(item){
     if(!document.fonts || !document.fonts.load) return;
@@ -1543,7 +1686,8 @@
     const txt = item.text || '';
     try{ if(document.fonts.check(spec, txt)) return; }catch(e){ return; }
     document.fonts.load(spec, txt).then(() => {
-      if(isSvgMode(item) && !item.editing && items.includes(item)) renderGradePreview(item);
+      if(item.extrude3d){ item._flat3d = null; if(!item.editing && items.includes(item)) applyArcModeVisibility(item); }
+      else if(isSvgMode(item) && !item.editing && items.includes(item)) renderGradePreview(item);
     }).catch(() => {});
   }
 
@@ -1786,6 +1930,31 @@
   });
   gradeStrengthInput.addEventListener('change', () => pushHistory());
   bindSliderReset(document.getElementById('gradeStrengthReset'), gradeStrengthInput, 50);
+
+  // ---- 3D文字（左右・上下の角度ゲージ付き） ----
+  extrudeChip.addEventListener('click', () => {
+    const item = getItem(selectedId);
+    if(!item || item.type !== 'text') return;
+    item.extrude3d = !item.extrude3d;
+    if(item.rot3dY == null) item.rot3dY = 35;
+    if(item.rot3dX == null) item.rot3dX = 10;
+    extrudeChip.classList.toggle('on', item.extrude3d);
+    extrudeOptionsEl.style.display = item.extrude3d ? 'flex' : 'none';
+    extrudeAngleYInput.value = item.rot3dY;
+    extrudeAngleXInput.value = item.rot3dX;
+    applyArcModeVisibility(item);
+    pushHistory();
+  });
+  [['Y', extrudeAngleYInput, 'rot3dY', 35], ['X', extrudeAngleXInput, 'rot3dX', 10]].forEach(([ax, input, prop, def]) => {
+    input.addEventListener('input', () => {
+      const item = getItem(selectedId);
+      if(!item || item.type !== 'text') return;
+      item[prop] = parseInt(input.value, 10) || 0;
+      applyArcModeVisibility(item);
+    });
+    input.addEventListener('change', () => pushHistory());
+    bindSliderReset(document.getElementById('extrudeAngle' + ax + 'Reset'), input, def);
+  });
 
   // ---- ロゴスタイル見本（ツリー表示） ----
   // 見本はテキスト機能（色・袋文字＋縁取り・影・ネオン・斜体・弧・サイズ傾斜）の組み合わせだけで作っている。
@@ -2446,6 +2615,7 @@
       shadow: !!opts.shadow, shadowStrength: opts.shadowStrength || 1,
       neon: !!opts.neon, neonStrength: opts.neonStrength || 1, italic: !!opts.italic,
       arc: opts.arc || 0, arcEnabled: !!opts.arcEnabled,
+      extrude3d: !!opts.extrude3d, rot3dY: opts.rot3dY != null ? opts.rot3dY : 35, rot3dX: opts.rot3dX != null ? opts.rot3dX : 10,
       editing: false, cropping:false
     };
     items.push(item);
@@ -3460,6 +3630,14 @@
       ctx.fillStyle = item.bgColor;
       ctx.fillRect(-item.w/2, -item.h/2, item.w, item.h);
     }
+    if(item.extrude3d){
+      const r3 = render3DText(item);
+      if(r3){
+        ctx.drawImage(r3.cv, -r3.W/2, -r3.H/2, r3.W, r3.H);
+        ctx.restore();
+        return;
+      }
+    }
     if(isSvgMode(item)){
       drawSvgModeInner(ctx, item);
       ctx.restore();
@@ -3607,7 +3785,8 @@
           outlineBorder: it.outlineBorder, outlineBorderColor: it.outlineBorderColor, outlineBorderWidth: it.outlineBorderWidth,
           gradeMode: it.gradeMode, gradeStrength: it.gradeStrength,
           hollow: it.hollow, gradient: it.gradient,
-          shadow: it.shadow, shadowStrength: it.shadowStrength, neon: it.neon, neonStrength: it.neonStrength, italic: it.italic, arc: it.arc, arcEnabled: it.arcEnabled
+          shadow: it.shadow, shadowStrength: it.shadowStrength, neon: it.neon, neonStrength: it.neonStrength, italic: it.italic, arc: it.arc, arcEnabled: it.arcEnabled,
+          extrude3d: it.extrude3d, rot3dY: it.rot3dY, rot3dX: it.rot3dX
         };
       })
     };
