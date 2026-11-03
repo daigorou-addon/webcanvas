@@ -31,20 +31,6 @@
 3. 要素をクリックして位置・大きさ・回転・見た目を調整します。
 4. 「PNGでダウンロード」で保存します。
 
-### ローカルで動かす
-
-ビルド不要です。ダウンロードしたフォルダの `index.html` をブラウザで開くだけで動きます。
-フォントの読み込みにインターネット接続が必要です。
-
-```
-WebCanvas/
-├─ index.html
-├─ script.js
-├─ style.css
-├─ i18n.js
-└─ favicon.png
-```
-
 ### その他
 
 - 他のツールは [Daigorou-Tools](https://daigorou-addon.github.io/daigorou-tools/) からご覧いただけます。
@@ -80,20 +66,6 @@ Everything is processed on your own device. Your images and data are never sent 
 2. Choose a pencil, text, table, line, or shape from "Tools" to add it.
 3. Click an element to adjust its position, size, rotation, and appearance.
 4. Click "Download as PNG" to save.
-
-### Run locally
-
-No build step is needed. Just open `index.html` from the downloaded folder in your browser.
-An internet connection is required to load the fonts.
-
-```
-WebCanvas/
-├─ index.html
-├─ script.js
-├─ style.css
-├─ i18n.js
-└─ favicon.png
-```
 
 ### More
 
